@@ -196,7 +196,7 @@
 	create_stomp() //Adds the visual effect. Wom wom wom
 
 	for(var/mob/living/M in range(2,loc))
-		if(isXeno(M) || M.stat == DEAD || ((M.status_flags & XENO_HOST) && istype(M.buckled, /obj/structure/bed/nest)))
+		if(isxeno(M) || M.stat == DEAD || ((M.status_flags & XENO_HOST) && istype(M.buckled, /obj/structure/bed/nest)))
 			continue
 		var/distance = get_dist(M, loc)
 		var/damage = (rand(xeno_caste.melee_damage_lower, xeno_caste.melee_damage_upper) * 1.5) / max(1,distance + 1)
@@ -207,9 +207,9 @@
 			var/armor_block = M.run_armor_check("chest", "melee")
 			if(ishuman(M))
 				var/mob/living/carbon/human/H = M
-				H.take_overall_damage(rand(damage * 0.75,damage * 1.25), armor_block) //Armour functions against this.
+				H.take_overall_damage(rand(damage * 0.75,damage * 1.25), null, 0, 0, 0, armor_block) //Armour functions against this.
 			else
-				M.take_overall_damage(rand(damage * 0.75,damage * 1.25), armor_block) //Armour functions against this.
+				M.take_overall_damage(rand(damage * 0.75,damage * 1.25), 0, null, armor_block) //Armour functions against this.
 			to_chat(M, "<span class='highdanger'>You are stomped on by [src]!</span>")
 			shake_camera(M, 3, 3)
 		else

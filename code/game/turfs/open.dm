@@ -1,6 +1,7 @@
 
 //turfs with density = FALSE
 /turf/open
+	plane = FLOOR_PLANE
 	var/is_groundmap_turf = FALSE //whether this a turf used as main turf type for the 'outside' of a map.
 	var/allow_construction = TRUE //whether you can build things like barricades on this turf.
 	var/slayer = 0 //snow layer
@@ -235,9 +236,9 @@
 						to_chat(H, "<span class='warning'> Your bracers hiss and spark as they short out!</span>")
 						Y.decloak(H)
 
-		else if(isXeno(C))
+		else if(isxeno(C))
 			river_slowdown = 1.3
-			if(isXenoBoiler(C))
+			if(isxenoboiler(C))
 				river_slowdown = -0.5
 
 		if(C.on_fire)
@@ -455,7 +456,7 @@
 //Randomize ice floor sprite
 /turf/open/ice/New()
 	..()
-	dir = pick(NORTH,SOUTH,EAST,WEST,NORTHEAST,NORTHWEST,SOUTHEAST,SOUTHWEST)
+	setDir(pick(NORTH,SOUTH,EAST,WEST,NORTHEAST,NORTHWEST,SOUTHEAST,SOUTHWEST))
 
 
 

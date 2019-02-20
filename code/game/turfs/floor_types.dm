@@ -44,22 +44,24 @@
 	desc = "Cats really don't like these things."
 	var/covered = 1 //1 for theres the cover, 0 if there isn't.
 
-	New()
-		..()
+	Initialize()
+		. = ..()
 		icon_state = base_state
 		update_turf_overlay()
 
 /turf/open/floor/plating/plating_catwalk/proc/update_turf_overlay()
 	var/image/I = image(icon, src, "catwalk", CATWALK_LAYER)
+	I.plane = GAME_PLANE
 	switch(covered)
 		if(0)
 			overlays -= I
 			qdel(I)
-		if(1) overlays += I
+		if(1) 
+			overlays += I
 
 /turf/open/floor/plating/plating_catwalk/attackby(obj/item/W as obj, mob/user as mob)
 	..()
-	if (istype(W, /obj/item/tool/crowbar))
+	if (iscrowbar(W))
 		if(covered)
 			var/obj/item/stack/catwalk/R = new(usr.loc)
 			R.add_to_stacks(usr)
@@ -93,6 +95,7 @@
 	icon_state = "catwalk0"
 	name = "catwalk"
 	desc = "Cats really don't like these things."
+	layer = 2.4
 
 
 
@@ -140,14 +143,14 @@
 						continue
 					landedon.KnockDown(3)
 					landedon.take_overall_damage(50, 0, "Blunt Trauma")
-				if(isXeno(AM))
+				if(isxeno(AM))
 					var/list/L = orange(rand(2,4))		// Not actually the fruit
 					for (var/mob/living/carbon/human/H in L)
 						H.KnockDown(3)
 						H.take_overall_damage(10, 0, "Blunt Trauma")
 				playsound(AM.loc, 'sound/effects/bang.ogg', 10, 0)
 			else
-				for(var/obj/structure/disposaloutlet/retrieval/R in structure_list)
+				for(var/obj/structure/disposaloutlet/retrieval/R in GLOB.structure_list)
 					if(R.z != src.z)	continue
 					var/obj/structure/disposalholder/H = new()
 					AM.loc = H
@@ -289,7 +292,7 @@
 		return
 	if(!user)
 		return
-	if(istype(C, /obj/item/tool/wrench))
+	if(iswrench(C))
 		user.visible_message("<span class='notice'>[user] starts removing [src]'s protective cover.</span>",
 		"<span class='notice'>You start removing [src]'s protective cover.</span>")
 		playsound(src, 'sound/items/Ratchet.ogg', 25, 1)

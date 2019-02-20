@@ -192,7 +192,7 @@
 /obj/item/storage/pill_bottle
 	name = "pill bottle"
 	desc = "It's an airtight container for storing medication."
-	icon_state = "pill_canister"
+	icon_state = "pill_canister1"
 	icon = 'icons/obj/items/chemistry.dmi'
 	item_state = "contsolid"
 	w_class = 2.0
@@ -264,7 +264,7 @@
 
 /obj/item/storage/pill_bottle/dexalin
 	name = "dexalin pill bottle"
-	icon_state = "pill_canister1"
+	icon_state = "pill_canister12"
 	pill_type_to_fill = /obj/item/reagent_container/pill/dexalin
 
 //Alkysine
@@ -300,6 +300,7 @@
 
 /obj/item/storage/pill_bottle/hypervene
 	name = "hypervene pill bottle"
+	desc = "A purge medication used to treat overdoses and rapidly remove toxins. Causes pain and vomiting."
 	icon_state = "pill_canister7"
 	pill_type_to_fill = /obj/item/reagent_container/pill/hypervene
 
