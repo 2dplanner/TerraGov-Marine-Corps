@@ -10,6 +10,7 @@ var/datum/mob_hud/huds = list(
 	MOB_HUD_XENO_INFECTION = new /datum/mob_hud/xeno_infection(), \
 	MOB_HUD_XENO_STATUS = new /datum/mob_hud/xeno(),
 	MOB_HUD_SQUAD = new /datum/mob_hud/squad(),
+	MOB_HUD_ORDER = new /datum/mob_hud/order(),
 	)
 
 /datum/mob_hud
@@ -84,15 +85,9 @@ var/datum/mob_hud/huds = list(
 //med hud used by medical hud glasses
 /datum/mob_hud/medical/advanced
 
-/datum/mob_hud/medical/advanced/add_to_single_hud(mob/user, mob/living/carbon/human/target)
-	if(istype(target))
-		if(target.species && target.species.name == "Yautja") //so you can't tell a pred's health with hud glasses.
-			return
-	..()
-
 //medical hud used by ghosts
 /datum/mob_hud/medical/observer
-	hud_icons = list(HEALTH_HUD, STATUS_HUD_OOC)
+	hud_icons = list(HEALTH_HUD, STATUS_HUD_OBSERVER_INFECTION, STATUS_HUD)
 
 
 //infection status that appears on humans, viewed by xenos only.
@@ -120,6 +115,9 @@ var/datum/mob_hud/huds = list(
 
 /datum/mob_hud/squad
 	hud_icons = list(SQUAD_HUD)
+	
+/datum/mob_hud/order
+	hud_icons = list(ORDER_HUD)	
 
 
 
@@ -201,8 +199,9 @@ var/datum/mob_hud/huds = list(
 	if(stat == DEAD)
 		holder.icon_state = "xenohealth0"
 	else
-		var/amount = round(health*100/maxHealth, 10)
-		if(!amount) amount = 1 //don't want the 'zero health' icon when we still have 4% of our health
+		var/amount = round(health * 100 / maxHealth, 10)
+		if(!amount)
+			amount = 1 //don't want the 'zero health' icon when we still have 4% of our health
 		holder.icon_state = "xenohealth[amount]"
 
 
@@ -259,8 +258,9 @@ var/datum/mob_hud/huds = list(
 	var/image/holder = hud_list[STATUS_HUD]
 	var/image/holder2 = hud_list[STATUS_HUD_OOC]
 	var/image/holder3 = hud_list[STATUS_HUD_XENO_INFECTION]
+	var/image/holder4 = hud_list[STATUS_HUD_OBSERVER_INFECTION]
 
-	if(species.flags & IS_SYNTHETIC)
+	if(species.species_flags & IS_SYNTHETIC)
 		holder.icon_state = "hudsynth"
 		holder2.icon_state = "hudsynth"
 		holder3.icon_state = "hudsynth"
@@ -287,8 +287,14 @@ var/datum/mob_hud/huds = list(
 			var/obj/item/alien_embryo/E = locate(/obj/item/alien_embryo) in src
 			if(E)
 				holder3.icon_state = "infected[E.stage]"
+				holder4.icon_state = "infected[E.stage]"
 			else if(locate(/mob/living/carbon/Xenomorph/Larva) in src)
 				holder.icon_state = "infected5"
+				holder4.icon_state = "infected5"
+			else
+				holder4.icon_state = ""
+		else
+			holder4.icon_state = ""
 
 		if(stat == DEAD)
 			if(revive_enabled)
@@ -299,6 +305,7 @@ var/datum/mob_hud/huds = list(
 					holder2_set = 1
 			else
 				holder.icon_state = "huddead"
+				holder4.icon_state = ""
 				if(!holder2_set || check_tod())
 					holder2.icon_state = "huddead"
 					holder3.icon_state = "huddead"
@@ -373,16 +380,14 @@ var/datum/mob_hud/huds = list(
 	holder.overlays.Cut()
 	holder.icon_state = "hudblank"
 	if(stat != DEAD)
-		if(hivenumber && hivenumber <= hive_datum.len)
-			var/datum/hive_status/hive = hive_datum[hivenumber]
-			if(hive.living_xeno_queen)
-				if(hive.living_xeno_queen.observed_xeno == src)
-					holder.icon_state = "queen_overwatch"
-				if(queen_chosen_lead)
-					var/image/I = image('icons/mob/hud.dmi',src, "hudxenoleader")
-					holder.overlays += I
-		if(upgrade)
-			var/image/J = image('icons/mob/hud.dmi',src, "hudxenoupgrade[upgrade]")
+		if(hive?.living_xeno_queen)
+			if(hive.living_xeno_queen.observed_xeno == src)
+				holder.icon_state = "queen_overwatch"
+			if(queen_chosen_lead)
+				var/image/I = image('icons/mob/hud.dmi',src, "hudxenoleader")
+				holder.overlays += I
+		if(upgrade_as_number() > 0) // theres only icons for 1 2 3, not for -1
+			var/image/J = image('icons/mob/hud.dmi',src, "hudxenoupgrade[upgrade_as_number()]")
 			holder.overlays += J
 	hud_list[QUEEN_OVERWATCH_HUD] = holder
 
@@ -433,9 +438,9 @@ var/datum/mob_hud/huds = list(
 		if(I)
 			perpname = I.registered_name
 
-	for(var/datum/data/record/E in data_core.general)
+	for(var/datum/data/record/E in GLOB.datacore.general)
 		if(E.fields["name"] == perpname)
-			for(var/datum/data/record/R in data_core.security)
+			for(var/datum/data/record/R in GLOB.datacore.security)
 				if((R.fields["id"] == E.fields["id"]) && (R.fields["criminal"] == "*Arrest*"))
 					holder.icon_state = "hudwanted"
 					break
@@ -445,47 +450,6 @@ var/datum/mob_hud/huds = list(
 				else if((R.fields["id"] == E.fields["id"]) && (R.fields["criminal"] == "Released"))
 					holder.icon_state = "hudreleased"
 					break
-
-
-
-//Special role HUD
-
-/mob/proc/hud_set_special_role()
-	return
-
-/mob/living/carbon/human/hud_set_special_role()
-	var/image/holder = hud_list[SPECIALROLE_HUD]
-	holder.icon_state = ""
-
-	if(mind)
-		switch(mind.special_role)
-			if("traitor", "Syndicate")
-				holder.icon_state = "hudsyndicate"
-			if("Revolutionary")
-				holder.icon_state = "hudrevolutionary"
-			if("Head Revolutionary")
-				holder.icon_state = "hudheadrevolutionary"
-			if("Cultist")
-				holder.icon_state = "hudcultist"
-			if("Changeling")
-				holder.icon_state = "hudchangeling"
-			if("Wizard", "Fake Wizard")
-				holder.icon_state = "hudwizard"
-			if("Death Commando")
-				holder.icon_state = "huddeathsquad"
-			if("Ninja")
-				holder.icon_state = "hudninja"
-			if("head_loyalist")
-				holder.icon_state = "hudloyalist"
-			if("loyalist")
-				holder.icon_state = "hudloyalist"
-			if("head_mutineer")
-				holder.icon_state = "hudmutineer"
-			if("mutineer")
-				holder.icon_state = "hudmutineer"
-
-
-
 
 
 //Squad HUD
@@ -509,7 +473,7 @@ var/datum/mob_hud/huds = list(
 		switch(_role)
 			if("Squad Engineer") marine_rk = "engi"
 			if("Squad Specialist") marine_rk = "spec"
-			if("Squad Medic") marine_rk = "med"
+			if("Squad Corpsman") marine_rk = "med"
 			if("Squad Smartgunner") marine_rk = "gun"
 		if(assigned_squad.squad_leader == src)
 			marine_rk = "leader"
@@ -523,3 +487,31 @@ var/datum/mob_hud/huds = list(
 			IMG2.color = squad_clr
 			holder.overlays += IMG2
 	hud_list[SQUAD_HUD] = holder
+	
+	
+//Order HUD
+
+/mob/living/carbon/human/proc/hud_set_order()
+	var/image/holder = hud_list[ORDER_HUD]
+	holder.overlays.Cut()
+	holder.icon_state = "hudblank"
+	if(stat != DEAD)
+		var/tempname = ""
+		if(mobility_aura)
+			tempname += "move"
+		if(protection_aura)
+			tempname += "hold"
+		if(marksman_aura)
+			tempname += "focus"
+		if(tempname)
+			holder.icon_state = "hud[tempname]"
+
+		switch(command_aura)
+			if("move")
+				holder.overlays += image('icons/mob/hud.dmi',src, "hudmoveaura")
+			if("hold")
+				holder.overlays += image('icons/mob/hud.dmi',src, "hudholdaura")
+			if("focus")
+				holder.overlays += image('icons/mob/hud.dmi',src, "hudfocusaura")
+
+	hud_list[ORDER_HUD] = holder	

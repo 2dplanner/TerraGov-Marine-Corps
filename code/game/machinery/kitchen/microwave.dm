@@ -54,7 +54,7 @@
 
 /obj/machinery/microwave/attackby(var/obj/item/O as obj, var/mob/user as mob)
 	if(src.broken > 0)
-		if(src.broken == 2 && istype(O, /obj/item/tool/screwdriver)) // If it's broken and they're using a screwdriver
+		if(src.broken == 2 && isscrewdriver(O)) // If it's broken and they're using a screwdriver
 			user.visible_message( \
 				"<span class='notice'> [user] starts to fix part of the microwave.</span>", \
 				"<span class='notice'> You start to fix part of the microwave.</span>" \
@@ -65,7 +65,7 @@
 					"<span class='notice'> You have fixed part of the microwave.</span>" \
 				)
 				src.broken = 1 // Fix it a bit
-		else if(src.broken == 1 && istype(O, /obj/item/tool/wrench)) // If it's broken and they're doing the wrench
+		else if(src.broken == 1 && iswrench(O)) // If it's broken and they're doing the wrench
 			user.visible_message( \
 				"<span class='notice'> [user] starts to fix part of the microwave.</span>", \
 				"<span class='notice'> You start to fix part of the microwave.</span>" \
@@ -208,9 +208,10 @@
 <A href='?src=\ref[src];action=dispose'>Eject ingredients!<BR>\
 "}
 
-	user << browse("<HEAD><TITLE>Microwave Controls</TITLE></HEAD><TT>[dat]</TT>", "window=microwave")
+	var/datum/browser/popup = new(user, "microwave", "<div align='center'>Microwave Controls</div>")
+	popup.set_content(dat)
+	popup.open(FALSE)
 	onclose(user, "microwave")
-	return
 
 
 
@@ -219,7 +220,7 @@
 ************************************/
 
 /obj/machinery/microwave/proc/cook()
-	if(stat & (NOPOWER|BROKEN))
+	if(machine_stat & (NOPOWER|BROKEN))
 		return
 	start()
 	if (reagents.total_volume==0 && !(locate(/obj) in contents)) //dry run
@@ -277,7 +278,7 @@
 
 /obj/machinery/microwave/proc/wzhzhzh(var/seconds as num)
 	for (var/i=1 to seconds)
-		if (stat & (NOPOWER|BROKEN))
+		if (machine_stat & (NOPOWER|BROKEN))
 			return 0
 		use_power(500)
 		sleep(10)

@@ -31,7 +31,7 @@
 		if(user.lying) //Can't use your inventory when lying
 			return
 
-		if(istype(user.loc, /obj/mecha)) //Stops inventory actions in a mech
+		if(istype(user.loc, /obj/mecha) || istype(user.loc, /obj/vehicle/multitile/root/cm_armored)) //Stops inventory actions in a mech/tank
 			return 0
 
 		if(over_object == user && Adjacent(user)) //This must come before the screen objects only block
@@ -48,7 +48,7 @@
 		if(master_item.loc != user || (master_item.loc && master_item.loc.loc == user))
 			return 0
 
-		if(!user.is_mob_restrained() && !user.stat)
+		if(!user.restrained() && !user.stat)
 			switch(over_object.name)
 				if("r_hand")
 					if(master_item.time_to_unequip)

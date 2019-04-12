@@ -56,9 +56,8 @@ var/list/ai_verbs_default = list(
 	var/ioncheck[1]
 	var/lawchannel = "Common" // Default channel on which to state laws
 	var/icon/holo_icon//Default is assigned when AI is created.
-	var/obj/item/device/pda/ai/aiPDA = null
-	var/obj/item/device/multitool/aiMulti = null
-	var/obj/item/device/radio/headset/ai_integrated/aiRadio = null
+	var/obj/item/multitool/aiMulti = null
+	var/obj/item/radio/headset/ai_integrated/aiRadio = null
 //Hud stuff
 
 	//MALFUNCTION
@@ -86,7 +85,7 @@ var/list/ai_verbs_default = list(
 /mob/living/silicon/ai/proc/remove_ai_verbs()
 	src.verbs -= ai_verbs_default
 
-/mob/living/silicon/ai/Initialize(loc, var/datum/ai_laws/L, var/obj/item/device/mmi/B, var/safety = 0)
+/mob/living/silicon/ai/Initialize(loc, var/datum/ai_laws/L, var/obj/item/mmi/B, var/safety = 0)
 	announcement = new()
 	announcement.title = "A.I. Announcement"
 	announcement.announcement_type = "A.I. Announcement"
@@ -97,12 +96,11 @@ var/list/ai_verbs_default = list(
 	var/pickedName = null
 	while(!pickedName)
 		pickedName = pick(ai_names)
-		for (var/mob/living/silicon/ai/A in mob_list)
+		for (var/mob/living/silicon/ai/A in GLOB.ai_list)
 			if (A.real_name == pickedName && possibleNames.len > 1) //fixing the theoretically possible infinite loop
 				possibleNames -= pickedName
 				pickedName = null
 
-	aiPDA = new/obj/item/device/pda/ai(src)
 	SetName(pickedName)
 	anchored = 1
 	canmove = 0
@@ -120,7 +118,7 @@ var/list/ai_verbs_default = list(
 	aiMulti = new(src)
 	aiRadio = new(src)
 	aiRadio.myAi = src
-	aiCamera = new/obj/item/device/camera/siliconcam/ai_camera(src)
+	aiCamera = new/obj/item/camera/siliconcam/ai_camera(src)
 
 	if (istype(loc, /turf))
 		add_ai_verbs(src)
@@ -170,12 +168,6 @@ var/list/ai_verbs_default = list(
 	announcement.announcer = pickedName
 	if(eyeobj)
 		eyeobj.name = "[pickedName] (AI Eye)"
-
-	// Set ai pda name
-	if(aiPDA)
-		aiPDA.ownjob = "AI"
-		aiPDA.owner = pickedName
-		aiPDA.name = pickedName + " (" + aiPDA.ownjob + ")"
 
 /*
 	The AI Power supply is a dummy object used for powering the AI since only machinery should be using power.
@@ -243,7 +235,7 @@ var/list/ai_verbs_default = list(
 	set category = "AI Commands"
 	set name = "Show Alerts"
 
-	var/dat = "<HEAD><TITLE>Current Station Alerts</TITLE><META HTTP-EQUIV='Refresh' CONTENT='10'></HEAD><BODY>\n"
+	var/dat = "<META HTTP-EQUIV='Refresh' CONTENT='10'>\n"
 	dat += "<A HREF='?src=\ref[src];mach_close=aialerts'>Close</A><BR><BR>"
 	for (var/cat in alarms)
 		dat += text("<B>[]</B><BR>\n", cat)
@@ -267,7 +259,11 @@ var/list/ai_verbs_default = list(
 		dat += "<BR>\n"
 
 	viewalerts = 1
-	src << browse(dat, "window=aialerts&can_close=0")
+
+	var/datum/browser/popup = new(src, "robotalerts", "<div align='center'>Current Station Alerts</div>")
+	popup.set_window_options("can_close=0")
+	popup.set_content(dat)
+	popup.open(FALSE)
 
 // this verb lets the ai see the stations manifest
 /mob/living/silicon/ai/proc/ai_roster()
@@ -304,7 +300,7 @@ var/list/ai_verbs_default = list(
 		return
 	user.reset_view(camera)
 
-/mob/living/silicon/ai/is_mob_restrained()
+/mob/living/silicon/ai/restrained()
 	return 0
 
 /mob/living/silicon/ai/emp_act(severity)
@@ -361,9 +357,9 @@ var/list/ai_verbs_default = list(
 		statelaws()
 
 	if (href_list["track"])
-		var/mob/target = locate(href_list["track"]) in mob_list
+		var/mob/target = locate(href_list["track"]) in GLOB.mob_list
 
-		if(target && (!istype(target, /mob/living/carbon/human) || html_decode(href_list["trackname"]) == target:get_face_name()))
+		if(target && (!ishuman(target) || html_decode(href_list["trackname"]) == target:get_face_name()))
 			ai_actual_track(target)
 		else
 			to_chat(src, "<span class='warning'>System error. Cannot locate [html_decode(href_list["trackname"])].</span>")
@@ -488,7 +484,7 @@ var/list/ai_verbs_default = list(
 
 	var/list/ai_emotions = list("Very Happy", "Happy", "Neutral", "Unsure", "Confused", "Surprised", "Sad", "Upset", "Angry", "Awesome", "BSOD", "Blank", "Problems?", "Facepalm", "Friend Computer")
 	var/emote = input("Please, select a status!", "AI Status", null, null) in ai_emotions
-	for (var/obj/machinery/M in machines) //change status
+	for (var/obj/machinery/M in GLOB.machines) //change status
 		if(istype(M, /obj/machinery/ai_status_display))
 			var/obj/machinery/ai_status_display/AISD = M
 			AISD.emotion = emote
@@ -516,7 +512,7 @@ var/list/ai_verbs_default = list(
 
 		var/personnel_list[] = list()
 
-		for(var/datum/data/record/t in data_core.locked)//Look in data core locked.
+		for(var/datum/data/record/t in GLOB.datacore.general)//Look in data core locked.
 			personnel_list["[t.fields["name"]]: [t.fields["rank"]]"] = t.fields["image"]//Pull names, rank, and image.
 
 		if(personnel_list.len)
@@ -603,7 +599,7 @@ var/list/ai_verbs_default = list(
 
 
 /mob/living/silicon/ai/attackby(obj/item/W as obj, mob/user as mob)
-	if(istype(W, /obj/item/tool/wrench))
+	if(iswrench(W))
 		if(anchored)
 			user.visible_message("<span class='notice'> \The [user] starts to unbolt \the [src] from the plating...</span>")
 			if(!do_after(user, 40, TRUE, 5, BUSY_ICON_BUILD))

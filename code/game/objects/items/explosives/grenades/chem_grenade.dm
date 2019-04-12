@@ -8,15 +8,14 @@
 	var/stage = 0
 	var/state = 0
 	var/path = 0
-	var/obj/item/device/assembly_holder/detonator = null
+	var/obj/item/assembly_holder/detonator = null
 	var/list/beakers = new/list()
 	var/list/allowed_containers = list(/obj/item/reagent_container/glass/beaker, /obj/item/reagent_container/glass/bottle)
 	var/affected_area = 3
 
-/obj/item/explosive/grenade/chem_grenade/New()
-	var/datum/reagents/R = new/datum/reagents(1000)
-	reagents = R
-	R.my_atom = src
+/obj/item/explosive/grenade/chem_grenade/Initialize(mapload, ...)
+	. = ..()
+	create_reagents(1000)
 
 /obj/item/explosive/grenade/chem_grenade/attack_self(mob/user as mob)
 	if(stage <= 1)
@@ -37,8 +36,8 @@
 
 /obj/item/explosive/grenade/chem_grenade/attackby(obj/item/W as obj, mob/user as mob)
 
-	if(istype(W,/obj/item/device/assembly_holder) && (!stage || stage==1) && path != 2)
-		var/obj/item/device/assembly_holder/det = W
+	if(istype(W,/obj/item/assembly_holder) && (!stage || stage==1) && path != 2)
+		var/obj/item/assembly_holder/det = W
 		if(istype(det.a_left,det.a_right.type) || (!isigniter(det.a_left) && !isigniter(det.a_right)))
 			to_chat(user, "<span class='warning'>Assembly must contain one igniter.</span>")
 			return
@@ -114,7 +113,7 @@
 		icon_state = initial(icon_state) + "_active"
 
 		if(user)
-			msg_admin_attack("[key_name(usr)] (<A HREF='?_src_=holder;adminmoreinfo=\ref[usr]'>?</A>) (<A HREF='?_src_=holder;adminplayerobservecoodjump=1;X=[usr.x];Y=[usr.y];Z=[usr.z]'>JMP</a>) (<A HREF='?_src_=holder;adminplayerfollow=\ref[usr]'>FLW</a>) primed \a [src]")
+			msg_admin_attack("[ADMIN_TPMONTY(usr)] primed \a [src].")
 
 	return
 
@@ -152,7 +151,7 @@
 				if( A == src ) continue
 				src.reagents.reaction(A, 1, 10)
 
-		if(istype(loc, /mob/living/carbon))		//drop dat grenade if it goes off in your hand
+		if(iscarbon(loc))		//drop dat grenade if it goes off in your hand
 			var/mob/living/carbon/C = loc
 			C.dropItemToGround(src)
 			C.throw_mode_off()
@@ -187,7 +186,7 @@
 	B2.reagents.add_reagent("foaming_agent", 10)
 	B2.reagents.add_reagent("pacid", 10)
 
-	detonator = new/obj/item/device/assembly_holder/timer_igniter(src)
+	detonator = new/obj/item/assembly_holder/timer_igniter(src)
 
 	beakers += B1
 	beakers += B2
@@ -211,7 +210,7 @@
 	B2.reagents.add_reagent("sacid", 15)
 	B1.reagents.add_reagent("fuel",20)
 
-	detonator = new/obj/item/device/assembly_holder/timer_igniter(src)
+	detonator = new/obj/item/assembly_holder/timer_igniter(src)
 
 	beakers += B1
 	beakers += B2
@@ -235,7 +234,7 @@
 	B2.reagents.add_reagent("phosphorus", 25)
 	B2.reagents.add_reagent("sugar", 25)
 
-	detonator = new/obj/item/device/assembly_holder/timer_igniter(src)
+	detonator = new/obj/item/assembly_holder/timer_igniter(src)
 
 	beakers += B1
 	beakers += B2
@@ -258,7 +257,7 @@
 	B2.reagents.add_reagent("water", 40)
 	B2.reagents.add_reagent("cleaner", 10)
 
-	detonator = new/obj/item/device/assembly_holder/timer_igniter(src)
+	detonator = new/obj/item/assembly_holder/timer_igniter(src)
 
 	beakers += B1
 	beakers += B2
@@ -282,7 +281,7 @@
 	B2.reagents.add_reagent("phosphorus", 25)
 	B2.reagents.add_reagent("sugar", 25)
 
-	detonator = new/obj/item/device/assembly_holder/timer_igniter(src, 2) //~4 second timer
+	detonator = new/obj/item/assembly_holder/timer_igniter(src, 2) //~4 second timer
 
 	beakers += B1
 	beakers += B2

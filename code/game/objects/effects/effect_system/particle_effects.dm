@@ -6,7 +6,6 @@
 	name = "effect"
 	icon = 'icons/effects/effects.dmi'
 	mouse_opacity = 0
-	unacidable = 1//So effect are not targeted by alien acid.
 	flags_pass = PASSTABLE|PASSGRILLE|PASSMOB
 
 	//Fire
@@ -22,7 +21,7 @@
 		qdel(src)
 	extinguish()
 
-	dir = pick(cardinal)
+	setDir(pick(cardinal))
 	SetLuminosity(3)
 
 	for(var/mob/living/L in loc)//Mobs

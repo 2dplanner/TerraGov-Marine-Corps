@@ -35,7 +35,7 @@ var/prison_shuttle_timeleft = 0
 
 
 	attackby(I as obj, user as mob)
-		if(istype(I, /obj/item/tool/screwdriver))
+		if(isscrewdriver(I))
 			playsound(src.loc, 'sound/items/Screwdriver.ogg', 25, 1)
 			if(do_after(user, 20, TRUE, 5, BUSY_ICON_BUILD))
 				var/obj/structure/computerframe/A = new /obj/structure/computerframe( src.loc )
@@ -45,7 +45,7 @@ var/prison_shuttle_timeleft = 0
 				A.circuit = M
 				A.anchored = 1
 
-				if (src.stat & BROKEN)
+				if (src.machine_stat & BROKEN)
 					to_chat(user, "<span class='notice'>The broken glass falls out.</span>")
 					new /obj/item/shard( src.loc )
 					A.state = 3
@@ -83,7 +83,9 @@ var/prison_shuttle_timeleft = 0
 			[prison_shuttle_moving_to_station || prison_shuttle_moving_to_prison ? "\n*Shuttle already called*<BR>\n<BR>":prison_shuttle_at_station ? "\n<A href='?src=\ref[src];sendtodock=1'>Send to Dock</A><BR>\n<BR>":"\n<A href='?src=\ref[src];sendtostation=1'>Send to station</A><BR>\n<BR>"]
 			\n<A href='?src=\ref[user];mach_close=computer'>Close</A>"}
 
-		user << browse(dat, "window=computer;size=575x450")
+		var/datum/browser/popup = new(user, "computer", "<div align='center'>Prison Shuttle Console</div>", 575, 450)
+		popup.set_content(dat)
+		popup.open(FALSE)
 		onclose(user, "computer")
 		return
 
@@ -92,7 +94,7 @@ var/prison_shuttle_timeleft = 0
 		if(..())
 			return
 
-		if ((usr.contents.Find(src) || (in_range(src, usr) && istype(src.loc, /turf))) || (istype(usr, /mob/living/silicon)))
+		if ((usr.contents.Find(src) || (in_range(src, usr) && istype(src.loc, /turf))) || (issilicon(usr)))
 			usr.set_interaction(src)
 
 		if (href_list["sendtodock"])
@@ -154,7 +156,7 @@ var/prison_shuttle_timeleft = 0
 
 
 	proc/post_signal(var/command)
-		var/datum/radio_frequency/frequency = radio_controller.return_frequency(1311)
+		var/datum/radio_frequency/frequency = SSradio.return_frequency(1311)
 		if(!frequency) return
 		var/datum/signal/status_signal = new
 		status_signal.source = src

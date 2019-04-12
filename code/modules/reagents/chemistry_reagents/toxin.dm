@@ -15,7 +15,7 @@
 
 /datum/reagent/toxin/on_mob_life(mob/living/carbon/M , alien)
 	var/mob/living/carbon/human/H = M
-	if(H.species.flags & NO_POISON)
+	if(H.species.species_flags & NO_POISON)
 		return FALSE //immunity to toxin reagents
 	if(toxpwr)
 		M.adjustToxLoss(toxpwr*REM)
@@ -251,7 +251,7 @@
 		if(ishuman(M))
 			var/mob/living/carbon/human/H = M
 			if(H.dna)
-				if(H.species.flags & IS_PLANT) //plantmen take a LOT of damage
+				if(H.species.species_flags & IS_PLANT) //plantmen take a LOT of damage
 					H.adjustToxLoss(10)
 
 /datum/reagent/toxin/sleeptoxin
@@ -328,8 +328,8 @@
 	overdose_threshold = REAGENTS_OVERDOSE
 
 /datum/reagent/toxin/potassium_chloride/overdose_process(mob/living/carbon/M, alien)
-	if(M.losebreath >= 10)
-		M.losebreath = max(10, M.losebreath-10)
+	if(M.losebreath > 10)
+		M.set_Losebreath(10)
 	M.adjustOxyLoss(2)
 	switch(current_cycle)
 		if(7 to 15)
@@ -347,8 +347,8 @@
 
 /datum/reagent/toxin/potassium_chlorophoride/on_mob_life(mob/living/carbon/M)
 	if(M.stat != UNCONSCIOUS)
-		if(M.losebreath >= 10)
-			M.losebreath = max(10, M.losebreath-10)
+		if(M.losebreath > 10)
+			M.set_Losebreath(10)
 		M.adjustOxyLoss(2)
 	switch(current_cycle)
 		if(7 to 15)
@@ -394,7 +394,7 @@
 			var/mob/living/carbon/human/H = M
 
 			if(H.head)
-				if(prob(meltprob) && !H.head.unacidable)
+				if(prob(meltprob) && !CHECK_BITFIELD(H.head.resistance_flags, UNACIDABLE|INDESTRUCTIBLE))
 					to_chat(H, "<span class='danger'>Your headgear melts away but protects you from the acid!</span>")
 					qdel(H.head)
 					H.update_inv_head(0)
@@ -404,7 +404,7 @@
 				return
 
 			if(H.wear_mask)
-				if(prob(meltprob) && !H.wear_mask.unacidable)
+				if(prob(meltprob) && !CHECK_BITFIELD(H.wear_mask.resistance_flags, UNACIDABLE|INDESTRUCTIBLE))
 					to_chat(H, "<span class='danger'>Your mask melts away but protects you from the acid!</span>")
 					qdel(H.wear_mask)
 					H.update_inv_wear_mask(0)
@@ -414,7 +414,7 @@
 				return
 
 			if(H.glasses) //Doesn't protect you from the acid but can melt anyways!
-				if(prob(meltprob) && !H.glasses.unacidable)
+				if(prob(meltprob) && !CHECK_BITFIELD(H.glasses.resistance_flags, UNACIDABLE|INDESTRUCTIBLE))
 					to_chat(H, "<span class='danger'>Your glasses melts away!</span>")
 					qdel(H.glasses)
 					H.update_inv_glasses(0)
@@ -422,7 +422,7 @@
 		else if(ismonkey(M))
 			var/mob/living/carbon/monkey/MK = M
 			if(MK.wear_mask)
-				if(!MK.wear_mask.unacidable)
+				if(!CHECK_BITFIELD(MK.wear_mask.resistance_flags, UNACIDABLE|INDESTRUCTIBLE))
 					to_chat(MK, "<span class='danger'>Your mask melts away but protects you from the acid!</span>")
 					qdel(MK.wear_mask)
 					MK.update_inv_wear_mask(0)
@@ -431,14 +431,14 @@
 				return
 
 		if(!M.unacidable)
-			if(istype(M, /mob/living/carbon/human) && volume >= 10)
+			if(ishuman(M) && volume >= 10)
 				var/mob/living/carbon/human/H = M
 				var/datum/limb/affecting = H.get_limb("head")
 				if(affecting)
-					if(affecting.take_damage(4*toxpwr, 2*toxpwr))
+					if(affecting.take_damage_limb(4 * toxpwr, 2 * toxpwr))
 						H.UpdateDamageIcon()
 					if(prob(meltprob)) //Applies disfigurement
-						if(!(H.species && (H.species.flags & NO_PAIN)))
+						if(!(H.species && (H.species.species_flags & NO_PAIN)))
 							H.emote("scream")
 						H.status_flags |= DISFIGURED
 						H.name = H.get_visible_name()
@@ -450,7 +450,7 @@
 
 /datum/reagent/toxin/acid/reaction_obj(var/obj/O, var/volume)
 	if((istype(O,/obj/item) || istype(O,/obj/effect/glowshroom)) && prob(meltprob * 3))
-		if(!O.unacidable)
+		if(!CHECK_BITFIELD(O.resistance_flags, UNACIDABLE|INDESTRUCTIBLE))
 			var/obj/effect/decal/cleanable/molten_item/I = new/obj/effect/decal/cleanable/molten_item(O.loc)
 			I.desc = "Looks like this was \an [O] some time ago."
 			for(var/mob/M in viewers(5, O))

@@ -1,23 +1,9 @@
-//This proc is the most basic of the procs. All it does is make a new mob on the same tile and transfer over a few variables.
-//Returns the new mob
-//Note that this proc does NOT do MMI related stuff!
-/mob/proc/change_mob_type(var/new_type = null, var/turf/location = null, var/new_name = null as text, var/delete_old_mob = 0 as num, var/subspecies)
-	if(istype(src,/mob/new_player))
-		to_chat(usr, "<span class='warning'>Cannot convert players who have not entered yet.</span>")
-		return
-
-	if(!new_type)
-		new_type = input("Mob type path:", "Mob type") as text|null
-
-	if(istext(new_type))
-		new_type = text2path(new_type)
-
+/mob/proc/change_mob_type(new_type, turf/location, new_name, delete_old_mob, subspecies)
 	if(!ispath(new_type))
-		to_chat(usr, "Invalid type path (new_type = [new_type]) in change_mob_type(). Contact a coder.")
 		return
 
 	if(new_type == /mob/new_player)
-		to_chat(usr, "<span class='warning'>Cannot convert into a new_player mob type.</span>")
+		to_chat(usr, "<span class='warning'>Cannot convert into a new_player.</span>")
 		return
 
 	var/mob/M
@@ -26,55 +12,59 @@
 	else
 		M = new new_type(loc)
 
-	if(!M || !ismob(M))
-		to_chat(usr, "Type path is not a mob (new_type = [new_type]) in change_mob_type(). Contact a coder.")
+	if(!istype(M))
+		to_chat(usr, "<span class='warning'>Invalid typepath.</span>")
 		qdel(M)
 		return
-
-	if(istext(new_name))
-		M.name = new_name
-		M.real_name = new_name
-	else
-		M.name = name
-		M.real_name = real_name
 
 	if(dna)
 		M.dna = dna.Clone()
 
-	if(mind && isliving(M))
-		mind.transfer_to(M, TRUE) // second argument to force key move to new mob)
+	if(mind)
+		mind.transfer_to(M, TRUE)
 	else
 		M.key = key
 		if(M.client) 
 			M.client.change_view(world.view)
 
+	if(istext(new_name))
+		M.name = new_name
+		M.real_name = new_name
+		if(M.mind)
+			M.mind.name = new_name
 
-	if(istype(M,/mob/living/carbon/human))
-		M.client.prefs.load_preferences()
+	if(ishuman(M))
 		var/mob/living/carbon/human/H = M
 		if(subspecies)
 			H.set_species(subspecies)
-		H.name = M.client.prefs.real_name
-		H.real_name = M.client.prefs.real_name
-		H.voice_name = M.client.prefs.real_name
-		H.gender = M.client.prefs.gender
-		H.h_style = M.client.prefs.h_style
-		H.f_style = M.client.prefs.f_style
-		H.r_hair = M.client.prefs.r_hair
-		H.g_hair = M.client.prefs.g_hair
-		H.b_hair = M.client.prefs.b_hair
-		H.r_facial = M.client.prefs.r_facial
-		H.g_facial = M.client.prefs.g_facial
-		H.b_facial = M.client.prefs.b_facial
-		H.r_eyes = M.client.prefs.r_eyes
-		H.g_eyes = M.client.prefs.g_eyes
-		H.b_eyes = M.client.prefs.b_eyes
-		H.age = M.client.prefs.age
-		H.ethnicity = M.client.prefs.ethnicity
-		H.body_type = M.client.prefs.body_type
-		M.client.prefs.save_preferences()
+		if(H.client)
+			H.name = H.client.prefs.real_name
+			H.real_name = H.client.prefs.real_name
+			H.voice_name = H.client.prefs.real_name
+			H.gender = H.client.prefs.gender
+			H.h_style = H.client.prefs.h_style
+			H.f_style = H.client.prefs.f_style
+			H.r_hair = H.client.prefs.r_hair
+			H.g_hair = H.client.prefs.g_hair
+			H.b_hair = H.client.prefs.b_hair
+			H.r_facial = H.client.prefs.r_facial
+			H.g_facial = H.client.prefs.g_facial
+			H.b_facial = H.client.prefs.b_facial
+			H.r_eyes = H.client.prefs.r_eyes
+			H.g_eyes = H.client.prefs.g_eyes
+			H.b_eyes = H.client.prefs.b_eyes
+			H.age = H.client.prefs.age
+			H.ethnicity = H.client.prefs.ethnicity
+			H.body_type = H.client.prefs.body_type
+			H.flavor_text = H.client.prefs.flavor_text
+		if(H.mind)
+			H.mind.name = H.real_name
 		
 	if(delete_old_mob)
-		spawn(1)
-			qdel(src)
+		QDEL_IN(src, 1)
+
 	return M
+
+
+/mob/new_player/change_mob_type(new_type, turf/location, new_name, delete_old_mob, subspecies)
+	return

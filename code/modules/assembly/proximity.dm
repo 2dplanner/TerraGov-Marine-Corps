@@ -1,4 +1,4 @@
-/obj/item/device/assembly/prox_sensor
+/obj/item/assembly/prox_sensor
 	name = "proximity sensor"
 	desc = "Used for scanning and alerting when someone enters a certain proximity."
 	icon_state = "prox"
@@ -47,12 +47,10 @@
 
 	sense()
 		var/turf/mainloc = get_turf(src)
-//		if(scanning && cooldown <= 0)
-//			mainloc.visible_message("\icon[src] *boop* *boop*", "*boop* *boop*")
 		if((!holder && !secured)||(!scanning)||(cooldown > 0))	return 0
 		pulse(0)
 		if(!holder)
-			mainloc.visible_message("\icon[src] *beep* *beep*", "*beep* *beep*")
+			mainloc.visible_message("[icon2html(src, viewers(mainloc))] *beep* *beep*", "*beep* *beep*")
 		cooldown = 2
 		spawn(10)
 			process_cooldown()
@@ -130,7 +128,7 @@
 
 	Topic(href, href_list)
 		..()
-		if(!usr.canmove || usr.stat || usr.is_mob_restrained() || !in_range(loc, usr))
+		if(!usr.canmove || usr.stat || usr.restrained() || !in_range(loc, usr))
 			usr << browse(null, "window=prox")
 			onclose(usr, "prox")
 			return

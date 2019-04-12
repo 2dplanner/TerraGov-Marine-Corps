@@ -9,7 +9,6 @@
 	anchored = 1
 	density = 0
 	layer = TURF_LAYER
-	unacidable = 1
 	health = 1
 
 /obj/effect/alien/weeds/healthcheck()
@@ -17,8 +16,8 @@
         round_statistics.weeds_destroyed++
         qdel(src)
 
-/obj/effect/alien/weeds/New(pos, obj/effect/alien/weeds/node/node)
-	..()
+/obj/effect/alien/weeds/Initialize(pos, obj/effect/alien/weeds/node/node)
+	. = ..()
 
 	update_sprite()
 	update_neighbours()
@@ -37,15 +36,14 @@
 /obj/effect/alien/weeds/examine(mob/user)
 	..()
 	var/turf/T = get_turf(src)
-	if(istype(T, /turf/open/floor))
+	if(isfloorturf(T))
 		T.ceiling_desc(user)
 
 
 /obj/effect/alien/weeds/Crossed(atom/movable/AM)
 	if(ishuman(AM))
 		var/mob/living/carbon/human/H = AM
-		if(!has_species(H,"Yautja")) //predators are immune to weed slowdown effect
-			H.next_move_slowdown += 1
+		H.next_move_slowdown += 1
 
 
 /obj/effect/alien/weeds/proc/weed_expand(obj/effect/alien/weeds/node/node)
@@ -68,8 +66,9 @@
 			if (W)
 				continue
 
-			if(istype(T, /turf/closed/wall))
-				new /obj/effect/alien/weeds/weedwall(T)
+			if(iswallturf(T))
+				var/obj/effect/alien/weeds/weedwall/WW = new (T)
+				transfer_fingerprints_to(WW)
 				continue
 
 			if (istype(T.loc, /area/arrival))
@@ -77,16 +76,18 @@
 
 			for (var/obj/O in T)
 				if(istype(O, /obj/structure/window/framed))
-					new /obj/effect/alien/weeds/weedwall/window(T)
+					var/obj/effect/alien/weeds/weedwall/window/WN = new (T)
+					transfer_fingerprints_to(WN)
 					continue direction_loop
 				else if(istype(O, /obj/structure/window_frame))
-					new /obj/effect/alien/weeds/weedwall/frame(T)
+					var/obj/effect/alien/weeds/weedwall/frame/F = new (T)
+					transfer_fingerprints_to(F)
 					continue direction_loop
 				else if(istype(O, /obj/machinery/door) && O.density && (!(O.flags_atom & ON_BORDER) || O.dir != dirn))
 					continue direction_loop
 
-			new /obj/effect/alien/weeds(T, node)
-
+			var/obj/effect/alien/weeds/S = new (T, node)
+			transfer_fingerprints_to(S)
 
 /obj/effect/alien/weeds/proc/update_neighbours(turf/U)
 	if(!U)
@@ -139,11 +140,13 @@
 	if(!W || !user || isnull(W) || (W.flags_item & NOBLUDGEON))
 		return 0
 
+	user.changeNext_move(W.attack_speed)
+
 	var/damage = W.force
 	if(W.w_class < 4 || !W.sharp || W.force < 20) //only big strong sharp weapon are adequate
 		damage *= 0.25
 
-	if(istype(W, /obj/item/tool/weldingtool))
+	if(iswelder(W))
 		var/obj/item/tool/weldingtool/WT = W
 
 		if(WT.remove_fuel(0))
@@ -189,7 +192,7 @@
 	icon_state = "weedwall"
 
 /obj/effect/alien/weeds/weedwall/update_sprite()
-	if(istype(loc, /turf/closed/wall))
+	if(iswallturf(loc))
 		var/turf/closed/wall/W = loc
 		if(W.junctiontype)
 			icon_state = "weedwall[W.junctiontype]"
@@ -226,14 +229,14 @@
 	overlays.Cut()
 	overlays += "weednode"
 
-/obj/effect/alien/weeds/node/New(loc, obj/effect/alien/weeds/node/node, mob/living/carbon/Xenomorph/X)
+/obj/effect/alien/weeds/node/Initialize(loc, obj/effect/alien/weeds/node/node, mob/living/carbon/Xenomorph/X)
 	for(var/obj/effect/alien/weeds/W in loc)
 		if(W != src)
 			qdel(W) //replaces the previous weed
 			break
 
 	overlays += "weednode"
-	..(loc, src)
+	. = ..(loc, src)
 	if(X)
 		add_hiddenprint(X)
 

@@ -25,9 +25,9 @@
 	if(internal_damage&MECHA_INT_CONTROL_LOST)
 		target = safepick(oview(1,src))
 	if(!melee_can_hit || !istype(target, /atom)) return
-	if(istype(target, /mob/living))
+	if(isliving(target))
 		var/mob/living/M = target
-		if(src.occupant.a_intent == "hurt")
+		if(src.occupant.a_intent == INTENT_HARM)
 			playsound(src, 'sound/weapons/punch4.ogg', 25, 1)
 			if(damtype == "brute")
 				step_away(M,src,15)
@@ -39,7 +39,7 @@
 					melee_can_hit = 1
 				return
 			*/
-			if(istype(target, /mob/living/carbon/human))
+			if(ishuman(target))
 				var/mob/living/carbon/human/H = target
 	//			if (M.health <= 0) return
 
@@ -49,9 +49,9 @@
 					switch(damtype)
 						if("brute")
 							H.KnockOut(1)
-							update |= temp.take_damage(rand(force/2, force), 0)
+							update |= temp.take_damage_limb(rand(force/2, force), 0)
 						if("fire")
-							update |= temp.take_damage(0, rand(force/2, force))
+							update |= temp.take_damage_limb(0, rand(force/2, force))
 						if("tox")
 							if(H.reagents)
 								if(H.reagents.get_reagent_amount("carpotoxin") + force < force*2)
@@ -97,7 +97,7 @@
 				if(istype(target, target_type) && hascall(target, "attackby"))
 					src.occupant_message("You hit [target].")
 					src.visible_message("<font color='red'><b>[src.name] hits [target]</b></font>")
-					if(!istype(target, /turf/closed/wall))
+					if(!iswallturf(target))
 						target:attackby(src,src.occupant)
 					else if(prob(5))
 						target:dismantle_wall(1)
@@ -246,7 +246,7 @@
 	else
 		return 0
 
-/obj/mecha/combat/mmi_moved_inside(var/obj/item/device/mmi/mmi_as_oc as obj,mob/user as mob)
+/obj/mecha/combat/mmi_moved_inside(var/obj/item/mmi/mmi_as_oc as obj,mob/user as mob)
 	if(..())
 		if(occupant.client)
 			occupant.client.mouse_pointer_icon = file("icons/mecha/mecha_mouse.dmi")

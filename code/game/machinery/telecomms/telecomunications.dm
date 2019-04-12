@@ -35,11 +35,8 @@ var/global/list/obj/machinery/telecomms/telecomms_list = list()
 	var/circuitboard = null // string pointing to a circuitboard type
 	var/hide = 0				// Is it a hidden machine?
 	var/listening_level = 0	// 0 = auto set in New() - this is the z level that the machine is listening to.
-	unacidable = 1
-
-//Never allow tecommunications machinery being blown up
-/obj/machinery/telecomms/ex_act(severity)
-	return
+	var/listen_same_level = FALSE
+	resistance_flags = UNACIDABLE|INDESTRUCTIBLE
 
 /obj/machinery/telecomms/proc/relay_information(datum/signal/signal, filter, copysig, amount = 20)
 	// relay signal to all linked machinery that are of type [filter]. If signal has been sent [amount] times, stop sending
@@ -146,10 +143,13 @@ var/global/list/obj/machinery/telecomms/telecomms_list = list()
 	telecomms_list += src
 	..()
 
+	var/turf/position = get_turf(src)
+	if(listen_same_level)
+		listening_level = position.z
+
 	//Set the listening_level if there's none.
-	if(!listening_level)
+	else if(!listening_level)
 		//Defaults to our Z level!
-		var/turf/position = get_turf(src)
 		listening_level = position.z
 
 	start_processing()
@@ -196,7 +196,7 @@ var/global/list/obj/machinery/telecomms/telecomms_list = list()
 /obj/machinery/telecomms/proc/update_power()
 
 	if(toggled)
-		if(stat & (BROKEN|NOPOWER|EMPED) || integrity <= 0) // if powered, on. if not powered, off. if too damaged, off
+		if(machine_stat & (BROKEN|NOPOWER|EMPED) || integrity <= 0) // if powered, on. if not powered, off. if too damaged, off
 			on = 0
 		else
 			on = 1
@@ -217,11 +217,11 @@ var/global/list/obj/machinery/telecomms/telecomms_list = list()
 
 /obj/machinery/telecomms/emp_act(severity)
 	if(prob(100/severity))
-		if(!(stat & EMPED))
-			stat |= EMPED
+		if(!(machine_stat & EMPED))
+			machine_stat |= EMPED
 			var/duration = (300 * 10)/severity
 			spawn(rand(duration - 20, duration + 20)) // Takes a long time for the machines to reboot.
-				stat &= ~EMPED
+				machine_stat &= ~EMPED
 	..()
 
 ///obj/machinery/telecomms/proc/checkheat()
@@ -495,20 +495,15 @@ var/global/list/obj/machinery/telecomms/telecomms_list = list()
 	var/totaltraffic = 0 // gigabytes (if > 1024, divide by 1024 -> terrabytes)
 
 	var/list/memory = list()	// stored memory
-	var/rawcode = ""	// the code to compile (raw text)
-	var/datum/TCS_Compiler/Compiler	// the compiler that compiles and runs the code
-	var/autoruncode = 0		// 1 if the code is set to run every time a signal is picked up
 
 	var/encryption = "null" // encryption key: ie "password"
 	var/salt = "null"		// encryption salt: ie "123comsat"
 							// would add up to md5("password123comsat")
 	var/language = "human"
-	var/obj/item/device/radio/headset/server_radio = null
+	var/obj/item/radio/headset/server_radio = null
 
 /obj/machinery/telecomms/server/New()
 	..()
-	Compiler = new()
-	Compiler.Holder = src
 	server_radio = new()
 
 /obj/machinery/telecomms/server/receive_information(datum/signal/signal, obj/machinery/telecomms/machine_from)
@@ -540,7 +535,7 @@ var/global/list/obj/machinery/telecomms/telecomms_list = list()
 				log.parameters["name"] = signal.data["name"]
 				log.parameters["realname"] = signal.data["realname"]
 
-				if(!istype(M, /mob/new_player) && M)
+				if(!isnewplayer(M) && M)
 					log.parameters["uspeech"] = M.universal_speak
 				else
 					log.parameters["uspeech"] = 0
@@ -565,22 +560,9 @@ var/global/list/obj/machinery/telecomms/telecomms_list = list()
 				var/identifier = num2text( rand(-1000,1000) + world.time )
 				log.name = "data packet ([md5(identifier)])"
 
-				if(Compiler && autoruncode)
-					Compiler.Run(signal)	// execute the code
-
 			var/can_send = relay_information(signal, "/obj/machinery/telecomms/hub")
 			if(!can_send)
 				relay_information(signal, "/obj/machinery/telecomms/broadcaster")
-
-
-/obj/machinery/telecomms/server/proc/setcode(var/t)
-	if(t)
-		if(istext(t))
-			rawcode = t
-
-/obj/machinery/telecomms/server/proc/compile()
-	if(Compiler)
-		return Compiler.Compile(rawcode)
 
 /obj/machinery/telecomms/server/proc/update_logs()
 	// start deleting the very first log entry

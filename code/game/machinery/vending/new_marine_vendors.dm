@@ -56,7 +56,7 @@
 
 /obj/machinery/marine_selector/power_change()
 	. = ..()
-	if( !(stat & NOPOWER) )
+	if( !(machine_stat & NOPOWER) )
 		icon_state = initial(icon_state)
 	else
 		spawn(rand(0, 15))
@@ -66,7 +66,7 @@
 
 /obj/machinery/marine_selector/attack_hand(mob/user)
 
-	if(stat & (BROKEN|NOPOWER))
+	if(machine_stat & (BROKEN|NOPOWER))
 		return
 
 	if(!ishuman(user))
@@ -146,9 +146,9 @@
 
 
 /obj/machinery/marine_selector/Topic(href, href_list)
-	if(stat & (BROKEN|NOPOWER))
+	if(machine_stat & (BROKEN|NOPOWER))
 		return
-	if(usr.is_mob_incapacitated())
+	if(usr.incapacitated())
 		return
 
 	if (in_range(src, usr) && isturf(loc) && ishuman(usr))
@@ -202,6 +202,10 @@
 						to_chat(H, "<span class='warning'>You already have a specialist specialization.</span>")
 						return
 					var/p_name = L[1]
+					if(findtext(p_name, "Scout Set")) //Makes sure there can only be one Scout kit taken despite the two variants.
+						p_name = "Scout Set"
+					else if(findtext(p_name, "Heavy Armor Set")) //Makes sure there can only be one Heavy kit taken despite the two variants.
+						p_name = "Heavy Armor Set"
 					if(!available_specialist_sets.Find(p_name))
 						to_chat(H, "<span class='warning'>That set is already taken</span>")
 						return
@@ -231,14 +235,18 @@
 			if(bitf == MARINE_CAN_BUY_UNIFORM)
 				new headset_type(loc)
 				new gloves_type(loc)
-				//if(istype(ticker.mode, /datum/game_mode/ice_colony))//drop a coif with the uniform on ice colony
-				if(map_tag == MAP_ICE_COLONY)
+				//if(istype(SSticker.mode, /datum/game_mode/ice_colony))//drop a coif with the uniform on ice colony
+				if(SSmapping.config.map_name == MAP_ICE_COLONY)
 					new /obj/item/clothing/mask/rebreather/scarf(loc)
 
 
 			if(bitf == MARINE_CAN_BUY_ESSENTIALS)
 				if(vendor_role == "Squad Specialist" && H.mind && H.mind.assigned_role == "Squad Specialist")
 					var/p_name = L[1]
+					if(findtext(p_name, "Scout Set")) //Makes sure there can only be one Scout kit taken despite the two variants.
+						p_name = "Scout Set"
+					else if(findtext(p_name, "Heavy Armor Set")) //Makes sure there can only be one Heavy kit taken despite the two variants.
+						p_name = "Heavy Armor Set"
 					if(p_name)
 						H.specset = p_name
 					else
@@ -332,25 +340,25 @@
 	squad_tag = "Alpha"
 	req_access = list(ACCESS_MARINE_ALPHA)
 	gloves_type = /obj/item/clothing/gloves/marine/alpha
-	headset_type = /obj/item/device/radio/headset/almayer/marine/alpha
+	headset_type = /obj/item/radio/headset/almayer/marine/alpha
 
 /obj/machinery/marine_selector/clothes/bravo
 	squad_tag = "Bravo"
 	req_access = list(ACCESS_MARINE_BRAVO)
 	gloves_type = /obj/item/clothing/gloves/marine/bravo
-	headset_type = /obj/item/device/radio/headset/almayer/marine/bravo
+	headset_type = /obj/item/radio/headset/almayer/marine/bravo
 
 /obj/machinery/marine_selector/clothes/charlie
 	squad_tag = "Charlie"
 	req_access = list(ACCESS_MARINE_CHARLIE)
 	gloves_type = /obj/item/clothing/gloves/marine/charlie
-	headset_type = /obj/item/device/radio/headset/almayer/marine/charlie
+	headset_type = /obj/item/radio/headset/almayer/marine/charlie
 
 /obj/machinery/marine_selector/clothes/delta
 	squad_tag = "Delta"
 	req_access = list(ACCESS_MARINE_DELTA)
 	gloves_type = /obj/item/clothing/gloves/marine/delta
-	headset_type = /obj/item/device/radio/headset/almayer/marine/delta
+	headset_type = /obj/item/radio/headset/almayer/marine/delta
 
 
 
@@ -403,31 +411,31 @@
 	squad_tag = "Alpha"
 	req_access = list(ACCESS_MARINE_ENGPREP, ACCESS_MARINE_ALPHA)
 	gloves_type = /obj/item/clothing/gloves/marine/alpha/insulated
-	headset_type = /obj/item/device/radio/headset/almayer/marine/alpha/engi
+	headset_type = /obj/item/radio/headset/almayer/marine/alpha/engi
 
 /obj/machinery/marine_selector/clothes/engi/bravo
 	squad_tag = "Bravo"
 	req_access = list(ACCESS_MARINE_ENGPREP, ACCESS_MARINE_BRAVO)
 	gloves_type = /obj/item/clothing/gloves/marine/bravo/insulated
-	headset_type = /obj/item/device/radio/headset/almayer/marine/bravo/engi
+	headset_type = /obj/item/radio/headset/almayer/marine/bravo/engi
 
 /obj/machinery/marine_selector/clothes/engi/charlie
 	squad_tag = "Charlie"
 	req_access = list(ACCESS_MARINE_ENGPREP, ACCESS_MARINE_CHARLIE)
 	gloves_type = /obj/item/clothing/gloves/marine/charlie/insulated
-	headset_type = /obj/item/device/radio/headset/almayer/marine/charlie/engi
+	headset_type = /obj/item/radio/headset/almayer/marine/charlie/engi
 
 /obj/machinery/marine_selector/clothes/engi/delta
 	squad_tag = "Delta"
 	req_access = list(ACCESS_MARINE_ENGPREP, ACCESS_MARINE_DELTA)
 	gloves_type = /obj/item/clothing/gloves/marine/delta/insulated
-	headset_type = /obj/item/device/radio/headset/almayer/marine/delta/engi
+	headset_type = /obj/item/radio/headset/almayer/marine/delta/engi
 
 
 
 /obj/machinery/marine_selector/clothes/medic
 	req_access = list(ACCESS_MARINE_MEDPREP)
-	vendor_role = "Squad Medic"
+	vendor_role = "Squad Corpsman"
 	gives_webbing = FALSE
 
 	listed_products = list(
@@ -441,8 +449,8 @@
 							list("Integrated Storage Armor", 0, /obj/item/clothing/suit/storage/marine/M3IS, MARINE_CAN_BUY_ARMOR, "black"),
 							list("Edge Melee Armor", 0, /obj/item/clothing/suit/storage/marine/M3E, MARINE_CAN_BUY_ARMOR, "black"),
 							list("BACKPACK (choose 1)", 0, null, null, null),
-							list("Satchel", 0, /obj/item/storage/backpack/marine/satchel/medic, MARINE_CAN_BUY_BACKPACK, "orange"),
-							list("Backpack", 0, /obj/item/storage/backpack/marine/medic, MARINE_CAN_BUY_BACKPACK, "black"),
+							list("Satchel", 0, /obj/item/storage/backpack/marine/satchel/corpsman, MARINE_CAN_BUY_BACKPACK, "orange"),
+							list("Backpack", 0, /obj/item/storage/backpack/marine/corpsman, MARINE_CAN_BUY_BACKPACK, "black"),
 							list("WEBBING (choose 1)", 0, null, null, null),
 							list("Tactical Brown Vest", 0, /obj/item/clothing/tie/storage/brown_vest, MARINE_CAN_BUY_WEBBING, "orange"),
 							list("Tactical Webbing", 0, /obj/item/clothing/tie/storage/webbing, MARINE_CAN_BUY_WEBBING, "black"),
@@ -473,25 +481,25 @@
 	squad_tag = "Alpha"
 	req_access = list(ACCESS_MARINE_MEDPREP, ACCESS_MARINE_ALPHA)
 	gloves_type = /obj/item/clothing/gloves/marine/alpha
-	headset_type = /obj/item/device/radio/headset/almayer/marine/alpha/med
+	headset_type = /obj/item/radio/headset/almayer/marine/alpha/med
 
 /obj/machinery/marine_selector/clothes/medic/bravo
 	squad_tag = "Bravo"
 	req_access = list(ACCESS_MARINE_MEDPREP, ACCESS_MARINE_BRAVO)
 	gloves_type = /obj/item/clothing/gloves/marine/bravo
-	headset_type = /obj/item/device/radio/headset/almayer/marine/bravo/med
+	headset_type = /obj/item/radio/headset/almayer/marine/bravo/med
 
 /obj/machinery/marine_selector/clothes/medic/charlie
 	squad_tag = "Charlie"
 	req_access = list(ACCESS_MARINE_MEDPREP, ACCESS_MARINE_CHARLIE)
 	gloves_type = /obj/item/clothing/gloves/marine/charlie
-	headset_type = /obj/item/device/radio/headset/almayer/marine/charlie/med
+	headset_type = /obj/item/radio/headset/almayer/marine/charlie/med
 
 /obj/machinery/marine_selector/clothes/medic/delta
 	squad_tag = "Delta"
 	req_access = list(ACCESS_MARINE_MEDPREP, ACCESS_MARINE_DELTA)
 	gloves_type = /obj/item/clothing/gloves/marine/delta
-	headset_type = /obj/item/device/radio/headset/almayer/marine/delta/med
+	headset_type = /obj/item/radio/headset/almayer/marine/delta/med
 
 
 
@@ -538,25 +546,25 @@
 	squad_tag = "Alpha"
 	req_access = list(ACCESS_MARINE_SMARTPREP, ACCESS_MARINE_ALPHA)
 	gloves_type = /obj/item/clothing/gloves/marine/alpha
-	headset_type = /obj/item/device/radio/headset/almayer/marine/alpha
+	headset_type = /obj/item/radio/headset/almayer/marine/alpha
 
 /obj/machinery/marine_selector/clothes/smartgun/bravo
 	squad_tag = "Bravo"
 	req_access = list(ACCESS_MARINE_SMARTPREP, ACCESS_MARINE_BRAVO)
 	gloves_type = /obj/item/clothing/gloves/marine/bravo
-	headset_type = /obj/item/device/radio/headset/almayer/marine/bravo
+	headset_type = /obj/item/radio/headset/almayer/marine/bravo
 
 /obj/machinery/marine_selector/clothes/smartgun/charlie
 	squad_tag = "Charlie"
 	req_access = list(ACCESS_MARINE_SMARTPREP, ACCESS_MARINE_CHARLIE)
 	gloves_type = /obj/item/clothing/gloves/marine/charlie
-	headset_type = /obj/item/device/radio/headset/almayer/marine/charlie
+	headset_type = /obj/item/radio/headset/almayer/marine/charlie
 
 /obj/machinery/marine_selector/clothes/smartgun/delta
 	squad_tag = "Delta"
 	req_access = list(ACCESS_MARINE_SMARTPREP, ACCESS_MARINE_DELTA)
 	gloves_type = /obj/item/clothing/gloves/marine/delta
-	headset_type = /obj/item/device/radio/headset/almayer/marine/delta
+	headset_type = /obj/item/radio/headset/almayer/marine/delta
 
 
 
@@ -604,25 +612,25 @@
 	squad_tag = "Alpha"
 	req_access = list(ACCESS_MARINE_SPECPREP, ACCESS_MARINE_ALPHA)
 	gloves_type = /obj/item/clothing/gloves/marine/alpha
-	headset_type = /obj/item/device/radio/headset/almayer/marine/alpha
+	headset_type = /obj/item/radio/headset/almayer/marine/alpha
 
 /obj/machinery/marine_selector/clothes/specialist/bravo
 	squad_tag = "Bravo"
 	req_access = list(ACCESS_MARINE_SPECPREP, ACCESS_MARINE_BRAVO)
 	gloves_type = /obj/item/clothing/gloves/marine/bravo
-	headset_type = /obj/item/device/radio/headset/almayer/marine/bravo
+	headset_type = /obj/item/radio/headset/almayer/marine/bravo
 
 /obj/machinery/marine_selector/clothes/specialist/charlie
 	squad_tag = "Charlie"
 	req_access = list(ACCESS_MARINE_SPECPREP, ACCESS_MARINE_CHARLIE)
 	gloves_type = /obj/item/clothing/gloves/marine/charlie
-	headset_type = /obj/item/device/radio/headset/almayer/marine/charlie
+	headset_type = /obj/item/radio/headset/almayer/marine/charlie
 
 /obj/machinery/marine_selector/clothes/specialist/delta
 	squad_tag = "Delta"
 	req_access = list(ACCESS_MARINE_SPECPREP, ACCESS_MARINE_DELTA)
 	gloves_type = /obj/item/clothing/gloves/marine/delta
-	headset_type = /obj/item/device/radio/headset/almayer/marine/delta
+	headset_type = /obj/item/radio/headset/almayer/marine/delta
 
 
 
@@ -674,25 +682,25 @@
 	squad_tag = "Alpha"
 	req_access = list(ACCESS_MARINE_LEADER, ACCESS_MARINE_ALPHA)
 	gloves_type = /obj/item/clothing/gloves/marine/alpha
-	headset_type = /obj/item/device/radio/headset/almayer/marine/alpha/lead
+	headset_type = /obj/item/radio/headset/almayer/marine/alpha/lead
 
 /obj/machinery/marine_selector/clothes/leader/bravo
 	squad_tag = "Bravo"
 	req_access = list(ACCESS_MARINE_LEADER, ACCESS_MARINE_BRAVO)
 	gloves_type = /obj/item/clothing/gloves/marine/bravo
-	headset_type = /obj/item/device/radio/headset/almayer/marine/bravo/lead
+	headset_type = /obj/item/radio/headset/almayer/marine/bravo/lead
 
 /obj/machinery/marine_selector/clothes/leader/charlie
 	squad_tag = "Charlie"
 	req_access = list(ACCESS_MARINE_LEADER, ACCESS_MARINE_CHARLIE)
 	gloves_type = /obj/item/clothing/gloves/marine/charlie
-	headset_type = /obj/item/device/radio/headset/almayer/marine/charlie/lead
+	headset_type = /obj/item/radio/headset/almayer/marine/charlie/lead
 
 /obj/machinery/marine_selector/clothes/leader/delta
 	squad_tag = "Delta"
 	req_access = list(ACCESS_MARINE_LEADER, ACCESS_MARINE_DELTA)
 	gloves_type = /obj/item/clothing/gloves/marine/delta
-	headset_type = /obj/item/device/radio/headset/almayer/marine/delta/lead
+	headset_type = /obj/item/radio/headset/almayer/marine/delta/lead
 
 
 
@@ -730,10 +738,10 @@
 	req_access = list(ACCESS_MARINE_DELTA)
 
 /obj/machinery/marine_selector/gear/medic
-	name = "NEXUS Automated Medic Equipment Rack"
+	name = "NEXUS Automated Medical Equipment Rack"
 	desc = "An automated medic equipment rack hooked up to a colossal storage unit."
 	icon_state = "medic"
-	vendor_role = "Squad Medic"
+	vendor_role = "Squad Corpsman"
 	req_access = list(ACCESS_MARINE_MEDPREP)
 
 	listed_products = list(
@@ -768,7 +776,7 @@
 							list("Injector (Tricord)", 1, /obj/item/reagent_container/hypospray/autoinjector/tricordrazine, null, "black"),
 							list("Injector (Hypervene)", 1, /obj/item/reagent_container/hypospray/autoinjector/hypervene, null, "black"),
 							list("Advanced hypospray", 2, /obj/item/reagent_container/hypospray/advanced, null, "black"),
-							list("Health analyzer", 2, /obj/item/device/healthanalyzer, null, "black"),
+							list("Health analyzer", 2, /obj/item/healthanalyzer, null, "black"),
 							list("Medical HUD glasses", 2, /obj/item/clothing/glasses/hud/health, null, "black"),
 
 							list("SPECIAL AMMUNITION", 0, null, null, null),
@@ -816,15 +824,15 @@
 							list("Plasma cutter", 20, /obj/item/tool/pickaxe/plasmacutter, null, "black"),
 							list("UA-580 point defense sentry kit", 26, /obj/item/storage/box/minisentry, null, "black"),
 							list("Plastique explosive", 3, /obj/item/explosive/plastique, null, "black"),
-							list("Detonation pack", 5, /obj/item/device/radio/detpack, null, "black"),
+							list("Detonation pack", 5, /obj/item/radio/detpack, null, "black"),
 							list("Entrenching tool", 1, /obj/item/tool/shovel/etool, null, "black"),
-							list("Range Finder", 10, /obj/item/device/binoculars/tactical/range, null, "black"),
+							list("Range Finder", 10, /obj/item/binoculars/tactical/range, null, "black"),
 							list("High capacity powercell", 1, /obj/item/cell/high, null, "black"),
 							list("M20 mine box", 18, /obj/item/storage/box/explosive_mines, null, "black"),
 							list("Incendiary grenade", 6, /obj/item/explosive/grenade/incendiary, null, "black"),
-							list("Multitool", 1, /obj/item/device/multitool, null, "black"),
+							list("Multitool", 1, /obj/item/multitool, null, "black"),
 							list("General circuit board", 1, /obj/item/circuitboard/general, null, "black"),
-							list("Signaler (for detpacks)", 1, /obj/item/device/assembly/signaler, null, "black"),
+							list("Signaler (for detpacks)", 1, /obj/item/assembly/signaler, null, "black"),
 
 							list("SPECIAL AMMUNITION", 0, null, null, null),
 							list("AP M4A3 magazine", 3, /obj/item/ammo_magazine/pistol/ap, null, "black"),
@@ -898,7 +906,7 @@
 
 
 //the global list of specialist sets that haven't been claimed yet.
-var/list/available_specialist_sets = list("Scout Set", "Sniper Set", "Demolitionist Set", "Heavy Grenadier Set", "Pyro Set")
+var/list/available_specialist_sets = list("Scout Set", "Sniper Set", "Demolitionist Set", "Heavy Armor Set", "Pyro Set")
 
 
 /obj/machinery/marine_selector/gear/spec
@@ -910,10 +918,12 @@ var/list/available_specialist_sets = list("Scout Set", "Sniper Set", "Demolition
 
 	listed_products = list(
 							list("SPECIALIST SETS (Choose one)", 0, null, null, null),
-							list("Scout Set", 0, /obj/item/storage/box/spec/scout, MARINE_CAN_BUY_ESSENTIALS, "white"),
+							list("Scout Set (Battle Rifle)", 0, /obj/item/storage/box/spec/scout, MARINE_CAN_BUY_ESSENTIALS, "white"),
+							list("Scout Set (Shotgun)", 0, /obj/item/storage/box/spec/scoutshotgun, MARINE_CAN_BUY_ESSENTIALS, "white"),
 							list("Sniper Set", 0, /obj/item/storage/box/spec/sniper, MARINE_CAN_BUY_ESSENTIALS, "white"),
 							list("Demolitionist Set", 0, /obj/item/storage/box/spec/demolitionist, MARINE_CAN_BUY_ESSENTIALS, "white"),
-							list("Heavy Grenadier Set", 0, /obj/item/storage/box/spec/heavy_grenadier, MARINE_CAN_BUY_ESSENTIALS, "white"),
+							list("Heavy Armor Set (Grenadier)", 0, /obj/item/storage/box/spec/heavy_grenadier, MARINE_CAN_BUY_ESSENTIALS, "white"),
+							list("Heavy Armor Set (Minigun)", 0, /obj/item/storage/box/spec/heavy_gunner, MARINE_CAN_BUY_ESSENTIALS, "white"),
 							list("Pyro Set", 0, /obj/item/storage/box/spec/pyro, MARINE_CAN_BUY_ESSENTIALS, "white"),
 
 							list("SPECIAL AMMUNITION", 0, null, null, null),
@@ -960,24 +970,25 @@ var/list/available_specialist_sets = list("Scout Set", "Sniper Set", "Demolition
 							list("Essential SL Set", 0, /obj/effect/essentials_set/leader, MARINE_CAN_BUY_ESSENTIALS, "white"),
 
 							list("LEADER SUPPLIES", 0, null, null, null),
-							list("Supply beacon", 10, /obj/item/device/squad_beacon, null, "black"),
-							list("Orbital beacon", 15, /obj/item/device/squad_beacon/bomb, null, "black"),
+							list("Supply beacon", 10, /obj/item/squad_beacon, null, "black"),
+							list("Orbital beacon", 15, /obj/item/squad_beacon/bomb, null, "black"),
 							list("Entrenching tool", 1, /obj/item/tool/shovel/etool, null, "black"),
 							list("Sandbags x25", 10, /obj/item/stack/sandbags_empty/half, null, "black"),
 							list("Plastique explosive", 3, /obj/item/explosive/plastique, null, "black"),
-							list("Detonation pack", 5, /obj/item/device/radio/detpack, null, "black"),
+							list("Detonation pack", 5, /obj/item/radio/detpack, null, "black"),
 							list("Smoke grenade", 2, /obj/item/explosive/grenade/smokebomb, null, "black"),
 							list("Cloak grenade", 3, /obj/item/explosive/grenade/cloakbomb, null, "black"),
-							list("M40 HIDP incendiary grenade", 4, /obj/item/explosive/grenade/incendiary, null, "black"),
-							list("M40 HEDP grenade", 4, /obj/item/explosive/grenade/frag, null, "black"),
+							list("M40 HIDP incendiary grenade", 3, /obj/item/explosive/grenade/incendiary, null, "black"),
+							list("M40 HEDP grenade", 3, /obj/item/explosive/grenade/frag, null, "black"),
+							list("M40 IMDP grenade", 3, /obj/item/explosive/grenade/impact, null, "black"),
 							list("M41AE2 heavy pulse rifle", 12, /obj/item/weapon/gun/rifle/lmg, null, "orange"),
-							list("M41AE2 ammo box (10x24mm)", 4, /obj/item/ammo_magazine/rifle/lmg, null, "black"),
+							list("M41AE2 magazine", 4, /obj/item/ammo_magazine/rifle/lmg, null, "black"),
 							list("Flamethrower", 12, /obj/item/weapon/gun/flamer, null, "orange"),
 							list("Flamethrower tank", 4, /obj/item/ammo_magazine/flamer_tank, null, "black"),
-							list("Whistle", 5, /obj/item/device/whistle, null, "black"),
-							list("Station bounced radio", 1, /obj/item/device/radio, null, "black"),
-							list("Signaler (for detpacks)", 1, /obj/item/device/assembly/signaler, null, "black"),
-							list("Motion detector", 5, /obj/item/device/motiondetector, null, "black"),
+							list("Whistle", 5, /obj/item/whistle, null, "black"),
+							list("Station bounced radio", 1, /obj/item/radio, null, "black"),
+							list("Signaler (for detpacks)", 1, /obj/item/assembly/signaler, null, "black"),
+							list("Motion detector", 5, /obj/item/motiondetector, null, "black"),
 							list("Advanced firstaid kit", 10, /obj/item/storage/firstaid/adv, null, "orange"),
 							list("Ziptie box", 5, /obj/item/storage/box/zipcuffs, null, "black"),
 							list("V1 thermal-dampening tarp", 5, /obj/structure/closet/bodybag/tarp, null, "black"),
@@ -1028,7 +1039,8 @@ var/list/available_specialist_sets = list("Scout Set", "Sniper Set", "Demolition
 	spawned_gear_list = list(
 						/obj/item/clothing/head/helmet/marine,
 						/obj/item/clothing/under/marine,
-						/obj/item/clothing/shoes/marine
+						/obj/item/clothing/shoes/marine,
+						/obj/item/storage/box/MRE
 						)
 
 
@@ -1036,13 +1048,15 @@ var/list/available_specialist_sets = list("Scout Set", "Sniper Set", "Demolition
 	spawned_gear_list = list(
 						/obj/item/clothing/head/helmet/marine,
 						/obj/item/clothing/under/marine,
-						/obj/item/clothing/shoes/marine
+						/obj/item/clothing/shoes/marine,
+						/obj/item/storage/box/MRE
 						)
 
 /obj/effect/essentials_set/basic_specialist
 	spawned_gear_list = list(
 						/obj/item/clothing/under/marine,
-						/obj/item/clothing/shoes/marine
+						/obj/item/clothing/shoes/marine,
+						/obj/item/storage/box/MRE
 						)
 
 /obj/effect/essentials_set/basic_squadleader
@@ -1051,15 +1065,17 @@ var/list/available_specialist_sets = list("Scout Set", "Sniper Set", "Demolition
 						/obj/item/clothing/head/helmet/marine/leader,
 						/obj/item/clothing/glasses/hud/health,
 						/obj/item/clothing/under/marine,
-						/obj/item/clothing/shoes/marine
+						/obj/item/clothing/shoes/marine,
+						/obj/item/storage/box/MRE
 						)
 
 /obj/effect/essentials_set/basic_medic
 	spawned_gear_list = list(
-						/obj/item/clothing/head/helmet/marine/medic,
+						/obj/item/clothing/head/helmet/marine/corpsman,
 						/obj/item/clothing/glasses/hud/health,
-						/obj/item/clothing/under/marine/medic,
-						/obj/item/clothing/shoes/marine
+						/obj/item/clothing/under/marine/corpsman,
+						/obj/item/clothing/shoes/marine,
+						/obj/item/storage/box/MRE
 						)
 
 /obj/effect/essentials_set/basic_engineer
@@ -1067,18 +1083,20 @@ var/list/available_specialist_sets = list("Scout Set", "Sniper Set", "Demolition
 						/obj/item/clothing/head/helmet/marine/tech,
 						/obj/item/clothing/glasses/welding,
 						/obj/item/clothing/under/marine/engineer,
-						/obj/item/clothing/shoes/marine
+						/obj/item/clothing/shoes/marine,
+						/obj/item/storage/box/MRE
 						)
 
 /obj/effect/essentials_set/medic
 	spawned_gear_list = list(
 						/obj/item/bodybag/cryobag,
-						/obj/item/device/defibrillator,
-						/obj/item/device/healthanalyzer,
+						/obj/item/defibrillator,
+						/obj/item/healthanalyzer,
 						/obj/item/roller/medevac,
-						/obj/item/device/medevac_beacon,
+						/obj/item/medevac_beacon,
 						/obj/item/roller,
-						/obj/item/reagent_container/hypospray/advanced/oxycodone
+						/obj/item/reagent_container/hypospray/advanced/oxycodone,
+						/obj/item/storage/box/MRE
 						)
 
 /obj/effect/essentials_set/engi
@@ -1088,22 +1106,24 @@ var/list/available_specialist_sets = list("Scout Set", "Sniper Set", "Demolition
 						/obj/item/stack/sheet/metal/small_stack,
 						/obj/item/cell/high,
 						/obj/item/tool/shovel/etool,
-						/obj/item/device/lightreplacer,
+						/obj/item/lightreplacer,
 						/obj/item/circuitboard/general,
+						/obj/item/storage/box/MRE
 						)
 
 
 /obj/effect/essentials_set/leader
 	spawned_gear_list = list(
 						/obj/item/explosive/plastique,
-						/obj/item/device/squad_beacon,
-						/obj/item/device/squad_beacon,
-						/obj/item/device/squad_beacon/bomb,
-						/obj/item/device/whistle,
-						/obj/item/device/radio,
-						/obj/item/device/motiondetector,
+						/obj/item/squad_beacon,
+						/obj/item/squad_beacon,
+						/obj/item/squad_beacon/bomb,
+						/obj/item/whistle,
+						/obj/item/radio,
+						/obj/item/motiondetector,
 						/obj/item/map/current_map,
-						/obj/item/device/binoculars/tactical
+						/obj/item/binoculars/tactical,
+						/obj/item/storage/box/MRE
 						)
 
 

@@ -54,17 +54,17 @@
 /obj/item/paper_bundle/proc/burnpaper(obj/item/P, mob/user)
 	var/class = "<span class='warning'>"
 
-	if(P.heat_source >= 400 && !user.is_mob_restrained())
+	if(P.heat_source >= 400 && !user.restrained())
 		if(istype(P, /obj/item/tool/lighter/zippo))
 			class = "<span class='rose'>"
 
-		user.visible_message("[class][user] holds \the [P] up to \the [src], it looks like \he's trying to burn it!", \
+		user.visible_message("[class][user] holds \the [P] up to \the [src], it looks like [user.p_theyre()] trying to burn it!</span>", \
 		"[class]You hold \the [P] up to \the [src], burning it slowly.")
 
 		spawn(20)
 			if(get_dist(src, user) < 2 && user.get_active_held_item() == P && P.heat_source)
-				user.visible_message("[class][user] burns right through \the [src], turning it to ash. It flutters through the air before settling on the floor in a heap.", \
-				"[class]You burn right through \the [src], turning it to ash. It flutters through the air before settling on the floor in a heap.")
+				user.visible_message("[class][user] burns right through \the [src], turning it to ash. It flutters through the air before settling on the floor in a heap.</span>", \
+				"[class]You burn right through \the [src], turning it to ash. It flutters through the air before settling on the floor in a heap.</span>")
 
 				if(user.get_inactive_held_item() == src)
 					user.dropItemToGround(src)
@@ -101,7 +101,7 @@
 				dat+= "<DIV STYLE='float;left; text-align:right; with:33.33333%'></DIV>"
 		if(istype(src[page], /obj/item/paper))
 			var/obj/item/paper/P = src[page]
-			if(!(istype(usr, /mob/living/carbon/human) || istype(usr, /mob/dead/observer) || istype(usr, /mob/living/silicon)))
+			if(!(ishuman(usr) || isobserver(usr) || issilicon(usr)))
 				dat+= "<HTML><HEAD><TITLE>[P.name]</TITLE></HEAD><BODY>[stars(P.info)][P.stamps]</BODY></HTML>"
 			else
 				dat+= "<HTML><HEAD><TITLE>[P.name]</TITLE></HEAD><BODY>[P.info][P.stamps]</BODY></HTML>"
@@ -113,7 +113,7 @@
 			human_user << browse(dat + "<html><head><title>[P.name]</title></head>" \
 			+ "<body style='overflow:hidden'>" \
 			+ "<div> <img src='tmp_photo.png' width = '180'" \
-			+ "[P.scribble ? "<div> Written on the back:<br><i>[P.scribble]</i>" : ]"\
+			+ "[P.scribble ? "<div> Written on the back:<br><i>[P.scribble]</i>" : ""]"\
 			+ "</body></html>", "window=[name]")
 			P.add_fingerprint(usr)
 		add_fingerprint(usr)

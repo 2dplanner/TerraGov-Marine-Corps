@@ -7,7 +7,6 @@
 	name = "alien thing"
 	desc = "You shouldn't be seeing this."
 	icon = 'icons/Xeno/effects.dmi'
-	unacidable = 1
 	layer = FLY_LAYER
 
 /obj/effect/xenomorph/splatter
@@ -72,16 +71,16 @@
 			H.emote("pain")
 			H.next_move_slowdown += slow_amt
 			var/datum/limb/affecting = H.get_limb("l_foot")
-			armor_block = H.run_armor_check(affecting, "energy")
-			if(istype(affecting) && affecting.take_damage(null, rand(14, 18), null, null, null, null, null, armor_block))
+			armor_block = H.run_armor_check(affecting, "acid")
+			if(istype(affecting) && affecting.take_damage_limb(0, rand(14, 18), FALSE, FALSE, armor_block))
 				H.UpdateDamageIcon()
 			affecting = H.get_limb("r_foot")
-			armor_block = H.run_armor_check(affecting, "energy")
-			if(istype(affecting) && affecting.take_damage(null, rand(14, 18), null, null, null, null, null, armor_block))
+			armor_block = H.run_armor_check(affecting, "acid")
+			if(istype(affecting) && affecting.take_damage_limb(0, rand(14, 18), FALSE, FALSE, armor_block))
 				H.UpdateDamageIcon()
 			H.updatehealth()
 		else
-			armor_block = H.run_armor_check("chest", "energy")
+			armor_block = H.run_armor_check("chest", "acid")
 			H.take_overall_damage(null, rand(12, 14), null, null, null, armor_block) //This is ticking damage!
 			to_chat(H, "<span class='danger'>You are scalded by the burning acid!</span>")
 
@@ -93,7 +92,7 @@
 		return
 
 	for(var/mob/living/carbon/M in loc)
-		if(isXeno(M))
+		if(isxeno(M))
 			continue
 		Crossed(M)
 
@@ -105,7 +104,6 @@
 	density = 0
 	opacity = 0
 	anchored = 1
-	unacidable = 1
 	var/atom/acid_t
 	var/ticks = 0
 	var/acid_strength = 1 //100% speed, normal
@@ -140,12 +138,14 @@
 	if(!acid_t || !acid_t.loc)
 		qdel(src)
 		return
+	if(loc != acid_t.loc && !isturf(acid_t))
+		loc = acid_t.loc
 	if(++ticks >= strength_t)
 		visible_message("<span class='xenodanger'>[acid_t] collapses under its own weight into a puddle of goop and undigested debris!</span>")
 		playsound(src, "acid_hit", 25)
 
 		if(istype(acid_t, /turf))
-			if(istype(acid_t, /turf/closed/wall))
+			if(iswallturf(acid_t))
 				var/turf/closed/wall/W = acid_t
 				new /obj/effect/acid_hole (W)
 			else

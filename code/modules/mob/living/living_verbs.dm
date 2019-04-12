@@ -1,12 +1,10 @@
-
-
 /mob/living/verb/resist()
 	set name = "Resist"
 	set category = "IC"
 
 	if(!isliving(usr) || usr.next_move > world.time)
 		return
-	if(usr.is_mob_incapacitated(TRUE))
+	if(usr.incapacitated(TRUE))
 		to_chat(src, "<span class='warning'>You can't resist in your current state.</span>")
 		return
 	var/mob/living/L = usr
@@ -34,7 +32,7 @@
 		return
 
 	//resisting grabs (as if it helps anyone...)
-	if(!is_mob_restrained(0) && pulledby)
+	if(!restrained(0) && pulledby)
 		visible_message("<span class='danger'>[src] resists against [pulledby]'s grip!</span>")
 		resist_grab()
 		return
@@ -145,7 +143,7 @@
 
 	//breaking out of handcuffs & putting out fires
 	else if(iscarbon(L))
-		if (isXeno(L))
+		if (isxeno(L))
 			var/mob/living/carbon/Xenomorph/X = L
 			if (X.on_fire && X.canmove && !knocked_down)
 				X.fire_stacks = max(X.fire_stacks - rand(3, 6), 0)
@@ -286,23 +284,52 @@
 						to_chat(CM, "<span class='notice'>You successfully remove \the [CM.legcuffed].</span>")
 						CM.dropItemToGround(CM.legcuffed)
 
+
 /mob/living/proc/lay_down()
 	set name = "Rest"
 	set category = "IC"
 
-	if(is_mob_incapacitated(TRUE))
+	if(incapacitated(TRUE))
 		return
 
 	if(!resting)
 		resting = TRUE
 		to_chat(src, "<span class='notice'>You are now resting.</span>")
 		update_canmove()
+	else if(action_busy)
+		to_chat(src, "<span class='warning'>You are still in the process of standing up.</span>")
+		return
 	else
-		if(action_busy) // do_after is unoptimal
-			return
-		if(do_after(src, 10, FALSE, 5, BUSY_ICON_GENERIC))
-			to_chat(src, "<span class='notice'>You get up.</span>")
-			resting = FALSE
-			update_canmove()
-		else
-			to_chat(src, "<span class='notice'>You fail to get up.</span>")
+		action_busy = TRUE
+		overlays += get_busy_icon(BUSY_ICON_GENERIC)
+		addtimer(CALLBACK(src, .proc/get_up), 2 SECONDS)
+
+
+/mob/living/proc/get_up()
+	action_busy = FALSE
+	overlays -= get_busy_icon(BUSY_ICON_GENERIC)
+	if(!incapacitated(TRUE))
+		to_chat(src, "<span class='notice'>You get up.</span>")
+		resting = FALSE
+		update_canmove()
+	else
+		to_chat(src, "<span class='notice'>You fail to get up.</span>")
+
+
+/mob/living/verb/ghost()
+	set category = "OOC"
+	set name = "Ghost"
+
+	if(stat == DEAD)
+		ghostize(TRUE)
+		return
+
+	if(alert(src, "Are you -sure- you want to ghost?\n(You are alive. If you ghost, you won't be able to return to your body. You can't change your mind so choose wisely!)", "Are you sure you want to ghost?", "Ghost", "Stay in body") != "Ghost")
+		return
+
+	resting = TRUE
+	log_game("[key_name(usr)] has ghosted.")
+	message_admins("[ADMIN_TPMONTY(usr)] has ghosted.")
+	var/mob/dead/observer/ghost = ghostize(FALSE)
+	if(ghost)
+		ghost.timeofdeath = world.time

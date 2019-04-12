@@ -47,7 +47,7 @@ using metal and glass, it uses glass and reagents (usually sulfuric acis).
 	attackby(var/obj/item/O as obj, var/mob/user as mob)
 		if (shocked)
 			shock(user,50)
-		if (istype(O, /obj/item/tool/screwdriver))
+		if (isscrewdriver(O))
 			if (!opened)
 				opened = 1
 				if(linked_console)
@@ -61,7 +61,7 @@ using metal and glass, it uses glass and reagents (usually sulfuric acis).
 				to_chat(user, "You close the maintenance hatch of [src].")
 			return
 		if (opened)
-			if(istype(O, /obj/item/tool/crowbar))
+			if(iscrowbar(O))
 				playsound(src.loc, 'sound/items/Crowbar.ogg', 25, 1)
 				var/obj/machinery/constructable_frame/machine_frame/M = new /obj/machinery/constructable_frame/machine_frame(src.loc)
 				M.state = 2
@@ -100,7 +100,7 @@ using metal and glass, it uses glass and reagents (usually sulfuric acis).
 		if (!istype(O, /obj/item/stack/sheet/glass) && !istype(O, /obj/item/stack/sheet/mineral/gold) && !istype(O, /obj/item/stack/sheet/mineral/diamond) && !istype(O, /obj/item/stack/sheet/mineral/uranium))
 			to_chat(user, "<span class='warning'>You cannot insert this item into the [name]!</span>")
 			return 1
-		if (stat)
+		if (machine_stat)
 			return 1
 		if (busy)
 			to_chat(user, "<span class='warning'>The [name] is busy. Please wait for completion of previous operation.</span>")

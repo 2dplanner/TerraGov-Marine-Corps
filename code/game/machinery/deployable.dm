@@ -62,7 +62,7 @@
 				s.start()
 				visible_message("<span class='warning'> BZZzZZzZZzZT</span>")
 				return
-		else if (istype(W, /obj/item/tool/wrench))
+		else if (iswrench(W))
 			if (src.health < src.maxhealth)
 				src.health = src.maxhealth
 				src.emagged = 0
@@ -97,7 +97,7 @@
 					src.explode()
 				return
 	emp_act(severity)
-		if(stat & (BROKEN|NOPOWER))
+		if(machine_stat & (BROKEN|NOPOWER))
 			return
 		if(prob(50/severity))
 			locked = !locked

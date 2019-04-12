@@ -35,17 +35,21 @@
 
 
 /obj/machinery/computer/atmos_alert/proc/set_frequency(new_frequency)
-	radio_controller.remove_object(src, receive_frequency)
+	SSradio.remove_object(src, receive_frequency)
 	receive_frequency = new_frequency
-	radio_connection = radio_controller.add_object(src, receive_frequency, RADIO_ATMOSIA)
+	radio_connection = SSradio.add_object(src, receive_frequency, RADIO_ATMOSIA)
 
 
 /obj/machinery/computer/atmos_alert/attack_hand(mob/user)
 	if(..(user))
 		return
-	user << browse(return_text(),"window=computer")
+
 	user.set_interaction(src)
+	var/datum/browser/popup = new(user, "computer", "<div align='center'>Main Overwatch Console</div>")
+	popup.set_content(return_text())
+	popup.open(FALSE)
 	onclose(user, "computer")
+
 
 /obj/machinery/computer/atmos_alert/process()
 	if(..())
@@ -53,7 +57,7 @@
 
 /obj/machinery/computer/atmos_alert/update_icon()
 	..()
-	if(stat & (NOPOWER|BROKEN))
+	if(machine_stat & (NOPOWER|BROKEN))
 		return
 	if(priority_alarms.len)
 		icon_state = "alert:2"

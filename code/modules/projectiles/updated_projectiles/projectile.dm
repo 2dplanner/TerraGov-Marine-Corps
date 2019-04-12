@@ -11,7 +11,7 @@
 	icon = 'icons/obj/items/projectiles.dmi'
 	icon_state = "bullet"
 	density = FALSE
-	unacidable = TRUE
+	resistance_flags = UNACIDABLE|INDESTRUCTIBLE
 	anchored = TRUE //You will not have me, space wind!
 	flags_atom = NOINTERACT //No real need for this, but whatever. Maybe this flag will do something useful in the future.
 	mouse_opacity = 0
@@ -50,6 +50,7 @@
 	var/in_flight = 0
 
 	var/projectile_speed = 0
+	var/armor_type = null
 
 /obj/item/projectile/New()
 	. = ..()
@@ -66,7 +67,6 @@
 	starting = null
 	permutated = null
 	path = null
-	list_reagents = null
 	return TA_REVIVE_ME
 
 /obj/item/projectile/Bumped(atom/A as mob|obj|turf|area)
@@ -78,9 +78,6 @@
 		scan_a_turf(get_turf(AM))
 
 
-/obj/item/projectile/ex_act()
-	return FALSE //We do not want anything to delete these, simply to make sure that all the bullet references are not runtiming. Otherwise, constantly need to check if the bullet exists.
-
 /obj/item/projectile/proc/generate_bullet(ammo_datum, bonus_damage = 0, reagent_multiplier = 0)
 	ammo 		= ammo_datum
 	name 		= ammo.name
@@ -91,7 +88,7 @@
 	accuracy   *= rand(CONFIG_GET(number/combat_define/proj_variance_low)-ammo.accuracy_var_low, CONFIG_GET(number/combat_define/proj_variance_high)+ammo.accuracy_var_high) * CONFIG_GET(number/combat_define/proj_base_accuracy_mult)//Rand only works with integers.
 	damage     *= rand(CONFIG_GET(number/combat_define/proj_variance_low)-ammo.damage_var_low, CONFIG_GET(number/combat_define/proj_variance_high)+ammo.damage_var_high) * CONFIG_GET(number/combat_define/proj_base_damage_mult)
 	damage_falloff = ammo.damage_falloff
-	list_reagents = ammo.ammo_reagents
+	armor_type = ammo.armor_type
 
 //Target, firer, shot from. Ie the gun
 /obj/item/projectile/proc/fire_at(atom/target,atom/F, atom/S, range = 30,speed = 1)
@@ -110,7 +107,7 @@
 	shot_from = S
 	in_flight = 1
 
-	dir = get_dir(loc, target_turf)
+	setDir(get_dir(loc, target_turf))
 
 	round_statistics.total_projectiles_fired++
 	if(ammo.flags_ammo_behavior & AMMO_BALLISTIC)
@@ -121,7 +118,7 @@
 	//If we have the the right kind of ammo, we can fire several projectiles at once.
 	if(ammo.bonus_projectiles_amount && ammo.bonus_projectiles_type) ammo.fire_bonus_projectiles(src)
 
-	path = getline2(starting,target_turf)
+	path = getline(starting,target_turf)
 
 	var/change_x = target_turf.x - starting.x
 	var/change_y = target_turf.y - starting.y
@@ -195,7 +192,7 @@
 		if(this_iteration == path.len)
 			next_turf = locate(current_turf.x + change_x, current_turf.y + change_y, current_turf.z)
 			if(current_turf && next_turf)
-				path = getline2(current_turf,next_turf) //Build a new flight path.
+				path = getline(current_turf,next_turf) //Build a new flight path.
 				if(path.len && src) //TODO look into this. This should always be true, but it can fail, apparently, against DCed people who fall down. Better yet, redo this.
 					distance_travelled-- //because the new follow_flightpath() repeats the last step.
 					follow_flightpath(speed, change_x, change_y, range) //Onwards!
@@ -251,9 +248,11 @@
 					#if DEBUG_HIT_CHANCE
 					to_chat(world, "DEBUG: Hit Chance 1: [hit_chance], Hit Roll: [hit_roll]")
 					#endif
-					if(hit_roll < 25 && !shot_from.sniper_target(A)) //Sniper targets more likely to hit
-						def_zone = pick(base_miss_chance)	// Still hit but now we might hit the wrong body part
-					if(!shot_from.sniper_target(A))
+					if(hit_roll < 25) //Sniper targets more likely to hit
+						if(shot_from && !shot_from.sniper_target(A) || !shot_from) //Avoid sentry run times
+							def_zone = pick(base_miss_chance)	// Still hit but now we might hit the wrong body part
+
+					if(shot_from && !shot_from.sniper_target(A)) //Avoid sentry run times
 						hit_chance -= base_miss_chance[def_zone] // Reduce accuracy based on spot.
 						#if DEBUG_HIT_CHANCE
 						to_chat(world, "Hit Chance 2: [hit_chance]")
@@ -357,9 +356,9 @@
 	return prob(hitchance)
 
 /obj/structure/window/get_projectile_hit_chance(obj/item/projectile/P)
-	if(P.ammo.flags_ammo_behavior & AMMO_ENERGY)
+	if(P.ammo.flags_ammo_behavior & AMMO_ENERGY || ( (flags_atom & ON_BORDER) && P.dir != dir && P.dir != reverse_direction(dir) ) )
 		return FALSE
-	else if(!(flags_atom & ON_BORDER) || (P.dir & dir) || (P.dir & reverse_direction(dir)))
+	else
 		return TRUE
 
 /obj/machinery/door/poddoor/railing/get_projectile_hit_chance(obj/item/projectile/P)
@@ -380,8 +379,8 @@
 		return 0
 
 	if(P.ammo.flags_ammo_behavior & (AMMO_XENO_ACID|AMMO_XENO_TOX))
-		if((status_flags & XENO_HOST) && istype(buckled, /obj/structure/bed/nest))
-			return 0
+		if(((status_flags & XENO_HOST) && istype(buckled, /obj/structure/bed/nest)) || stat == DEAD)
+			return FALSE
 
 	. = P.accuracy //We want a temporary variable so accuracy doesn't change every time the bullet misses.
 	#if DEBUG_HIT_CHANCE
@@ -420,9 +419,11 @@
 	if(ishuman(P.firer))
 		var/mob/living/carbon/human/shooter_human = P.firer
 		. -= round(max(30,(shooter_human.traumatic_shock) * 0.2)) //Chance to hit declines with pain, being reduced by 0.2% per point of pain.
-		if(shooter_human.marskman_aura)
-			. += shooter_human.marskman_aura * 1.5 //Flat buff of 3 % accuracy per aura level
-			. += P.distance_travelled * 0.35 * shooter_human.marskman_aura //Flat buff to accuracy per tile travelled
+		if(shooter_human.stagger)
+			. -= 30 //Being staggered fucks your aim.
+		if(shooter_human.marksman_aura) // Accuracy bonus from active focus order: flat bonus + bonus per tile traveled
+			. += shooter_human.marksman_aura * CONFIG_GET(number/combat_define/focus_base_bonus) 
+			. += P.distance_travelled * shooter_human.marksman_aura * CONFIG_GET(number/combat_define/focus_per_tile_bonus)
 
 
 /mob/living/carbon/human/get_projectile_hit_chance(obj/item/projectile/P)
@@ -475,9 +476,6 @@
 	if(P.ammo.debilitate && stat != DEAD && ( damage || (P.ammo.flags_ammo_behavior & AMMO_IGNORE_RESIST) ) )
 		apply_effects(arglist(P.ammo.debilitate))
 
-	if(P.list_reagents && stat != DEAD && (ishuman() || ismonkey()))
-		reagents.add_reagent_list(P.list_reagents)
-
 	if(damage)
 		bullet_message(P)
 		apply_damage(damage, P.ammo.damage_type, P.def_zone, 0, 0, 0, P)
@@ -509,17 +507,6 @@ Normal range for a defender's bullet resist should be something around 30-50. ~N
 	to_chat(world, "<span class='debuginfo'>Initial damage is: <b>[damage]</b></span>")
 	#endif
 
-	//Any projectile can decloak a predator. It does defeat one free bullet though.
-	if(gloves)
-		var/obj/item/clothing/gloves/yautja/Y = gloves
-		if(istype(Y) && Y.cloaked)
-			if( P.ammo.flags_ammo_behavior & (AMMO_ROCKET|AMMO_ENERGY|AMMO_XENO_ACID) ) //<--- These will auto uncloak.
-				Y.decloak(src) //Continue on to damage.
-			else if(rand(0,100) < 20)
-				Y.decloak(src)
-				return //Absorb one free bullet.
-			//Else we're moving on to damage.
-
 	//Shields
 	if( !(P.ammo.flags_ammo_behavior & AMMO_ROCKET) ) //No, you can't block rockets.
 		if( P.dir == reverse_direction(dir) && check_shields(damage * 0.65, "[P]") && src != P.shot_from.sniper_target(src)) //Aimed sniper shots will ignore shields
@@ -533,18 +520,17 @@ Normal range for a defender's bullet resist should be something around 30-50. ~N
 	//Run armor check. We won't bother if there is no damage being done.
 	if( damage > 0 && !(P.ammo.flags_ammo_behavior & AMMO_IGNORE_ARMOR) )
 		var/armor //Damage types don't correspond to armor types. We are thus merging them.
-		switch(P.ammo.damage_type)
-			if(BRUTE) armor = P.ammo.flags_ammo_behavior & AMMO_ROCKET ? getarmor_organ(organ, "bomb") : getarmor_organ(organ, "bullet")
-			if(BURN) armor = P.ammo.flags_ammo_behavior & AMMO_ENERGY ? getarmor_organ(organ, "energy") : getarmor_organ(organ, "laser")
-			if(TOX, OXY, CLONE) armor = getarmor_organ(organ, "bio")
-			else armor = getarmor_organ(organ, "energy") //Won't be used, but just in case.
+		armor = getarmor_organ(organ, P.armor_type) //Should always have a type; this defaults to bullet if nothing else.
+
 		#if DEBUG_HUMAN_DEFENSE
 		to_chat(world, "<span class='debuginfo'>Initial armor is: <b>[armor]</b></span>")
 		#endif
 		var/penetration = P.ammo.penetration > 0 || armor > 0 ? P.ammo.penetration : 0
-		if(src == P.shot_from.sniper_target(src))
-			damage *= SNIPER_LASER_DAMAGE_MULTIPLIER //+50% damage vs the aimed target
-			penetration *= SNIPER_LASER_ARMOR_MULTIPLIER //+50% penetration vs the aimed target
+		if(P.shot_from && src == P.shot_from.sniper_target(src)) //Runtimes bad
+			damage *= SNIPER_LASER_DAMAGE_MULTIPLIER
+			penetration *= SNIPER_LASER_ARMOR_MULTIPLIER
+			add_slowdown(SNIPER_LASER_SLOWDOWN_STACKS)
+
 		armor -= penetration//Minus armor penetration from the bullet. If the bullet has negative penetration, adding to their armor, but they don't have armor, they get nothing.
 		#if DEBUG_HUMAN_DEFENSE
 		to_chat(world, "<span class='debuginfo'>Adjusted armor after penetration is: <b>[armor]</b></span>")
@@ -579,13 +565,11 @@ Normal range for a defender's bullet resist should be something around 30-50. ~N
 				if(P.ammo.sound_armor) playsound(src, P.ammo.sound_armor, 50, 1)
 
 	if(P.ammo.debilitate && stat != DEAD && ( damage || (P.ammo.flags_ammo_behavior & AMMO_IGNORE_RESIST) ) )  //They can't be dead and damage must be inflicted (or it's a xeno toxin).
-		//Predators and synths are immune to these effects to cut down on the stun spam. This should later be moved to their apply_effects proc, but right now they're just humans.
-		if(species.name != "Yautja" && !(species.flags & IS_SYNTHETIC)) apply_effects(arglist(P.ammo.debilitate))
+		//Synths are immune to these effects to cut down on the stun spam. This should later be moved to their apply_effects proc, but right now they're just humans.
+		if(!(species.species_flags & IS_SYNTHETIC))
+			apply_effects(arglist(P.ammo.debilitate))
 
 	bullet_message(P) //We still want this, regardless of whether or not the bullet did damage. For griefers and such.
-
-	if(P.list_reagents && stat != DEAD)
-		reagents.add_reagent_list(P.list_reagents)
 
 	if(damage)
 		apply_damage(damage, P.ammo.damage_type, P.def_zone)
@@ -596,22 +580,23 @@ Normal range for a defender's bullet resist should be something around 30-50. ~N
 			shrap.desc = "[shrap.desc] It looks like it was fired from [P.shot_from ? P.shot_from : "something unknown"]."
 			shrap.loc = organ
 			organ.embed(shrap)
-			if(!stat && !(species && species.flags & NO_PAIN))
+			if(!stat && !(species && species.species_flags & NO_PAIN))
 				emote("scream")
 				to_chat(src, "<span class='highdanger'>You scream in pain as the impact sends <B>shrapnel</b> into the wound!</span>")
 
 		if(P.ammo.flags_ammo_behavior & AMMO_INCENDIARY)
 			adjust_fire_stacks(rand(6,11))
 			IgniteMob()
-			if(!stat && !(species.flags & NO_PAIN))
+			if(!stat && !(species.species_flags & NO_PAIN))
 				emote("scream")
 				to_chat(src, "<span class='highdanger'>You burst into flames!! Stop drop and roll!</span>")
 		return 1
 
 //Deal with xeno bullets.
 /mob/living/carbon/Xenomorph/bullet_act(obj/item/projectile/P)
-	if(!P || !istype(P)) return
-	if(P.ammo.flags_ammo_behavior & (AMMO_XENO_ACID|AMMO_XENO_TOX) ) //Aliens won't be harming aliens.
+	if(!P || !istype(P))
+		return
+	if(issamexenohive(P.firer)) //Aliens won't be harming allied aliens.
 		bullet_ping(P)
 		return
 
@@ -636,20 +621,20 @@ Normal range for a defender's bullet resist should be something around 30-50. ~N
 		#if DEBUG_XENO_DEFENSE
 		world << "<span class='debuginfo'>Initial armor is: <b>[armor]</b></span>"
 		#endif
-		if(isXenoQueen(src) || isXenoCrusher(src)) //Charging and crest resistances. Charging Xenos get a lot of extra armor, currently Crushers and Queens
+		if(isxenoqueen(src) || isxenocrusher(src)) //Charging and crest resistances. Charging Xenos get a lot of extra armor, currently Crushers and Queens
 			var/mob/living/carbon/Xenomorph/charger = src
 			armor += round(charger.charge_speed * 5) //Some armor deflection when charging.
 			#if DEBUG_CREST_DEFENSE
 			world << "<span class='debuginfo'>Projectile direction is: <b>[P.dir]</b> and crest direction is: <b>[charger.dir]</b></span>"
 			#endif
 			if(P.dir == charger.dir)
-				if(isXenoQueen(src))
+				if(isxenoqueen(src))
 					armor = max(0, armor - (xeno_caste.armor_deflection * CONFIG_GET(number/combat_define/xeno_armor_resist_low))) //Both facing same way -- ie. shooting from behind; armour reduced by 50% of base.
 				else
 					armor = max(0, armor - (xeno_caste.armor_deflection * CONFIG_GET(number/combat_define/xeno_armor_resist_lmed))) //Both facing same way -- ie. shooting from behind; armour reduced by 75% of base.
 			else if(P.dir == reverse_direction(charger.dir))
 				armor += round(xeno_caste.armor_deflection * CONFIG_GET(number/combat_define/xeno_armor_resist_low)) //We are facing the bullet.
-			else if(isXenoCrusher(src))
+			else if(isxenocrusher(src))
 				armor = max(0, armor - (xeno_caste.armor_deflection * CONFIG_GET(number/combat_define/xeno_armor_resist_vlow))) //side armour eats a bit of shit if we're a Crusher
 			//Otherwise use the standard armor deflection for crushers.
 			#if DEBUG_XENO_DEFENSE
@@ -657,9 +642,10 @@ Normal range for a defender's bullet resist should be something around 30-50. ~N
 			#endif
 
 		var/penetration = P.ammo.penetration > 0 || armor > 0 ? P.ammo.penetration : 0
-		if(src == P.shot_from.sniper_target(src))
-			damage *= SNIPER_LASER_DAMAGE_MULTIPLIER //+50% damage vs the aimed target
-			penetration *= SNIPER_LASER_ARMOR_MULTIPLIER //+50% penetration vs the aimed target
+		if(P.shot_from && src == P.shot_from.sniper_target(src))
+			damage *= SNIPER_LASER_DAMAGE_MULTIPLIER
+			penetration *= SNIPER_LASER_ARMOR_MULTIPLIER
+			add_slowdown(SNIPER_LASER_SLOWDOWN_STACKS)
 
 		armor -= penetration
 
@@ -803,28 +789,30 @@ Normal range for a defender's bullet resist should be something around 30-50. ~N
 	if(!P) return
 
 	if(P.ammo.flags_ammo_behavior & AMMO_IS_SILENCED)
-		to_chat(src, "[isXeno(src) ? "<span class='xenodanger'>" : "<span class='highdanger'>" ]You've been shot in the [parse_zone(P.def_zone)] by [P.name]!</span>")
+		to_chat(src, "[isxeno(src) ? "<span class='xenodanger'>" : "<span class='highdanger'>" ]You've been shot in the [parse_zone(P.def_zone)] by [P.name]!</span>")
 	else
 		visible_message("<span class='danger'>[name] is hit by the [P.name] in the [parse_zone(P.def_zone)]!</span>", \
 						"<span class='highdanger'>You are hit by the [P.name] in the [parse_zone(P.def_zone)]!</span>", null, 4)
 
 	if(ismob(P.firer))
 		var/mob/firingMob = P.firer
-		if(ishuman(firingMob) && ishuman(src) && firingMob.mind && !firingMob.mind.special_role && mind && !mind.special_role) //One human shot another, be worried about it but do everything basically the same //special_role should be null or an empty string if done correctly
+		var/turf/T = get_turf(firingMob)
+		if(ishuman(firingMob) && ishuman(src) && !firingMob.mind?.bypass_ff && !mind?.bypass_ff && firingMob.faction == faction)
 			log_combat(firingMob, src, "shot", P)
-			msg_admin_ff("[key_name(firingMob)] (<A HREF='?_src_=holder;adminmoreinfo=\ref[firingMob]'>?</A>) (<A HREF='?_src_=holder;adminplayerobservecoodjump=1;X=[firingMob.x];Y=[firingMob.y];Z=[firingMob.z]'>JMP</a>) (<A HREF='?_src_=holder;adminplayerfollow=\ref[firingMob]'>FLW</a>) shot [key_name(src)] (<A HREF='?_src_=holder;adminmoreinfo=\ref[src]'>?</A>) (<A HREF='?_src_=holder;adminplayerobservecoodjump=1;X=[src.x];Y=[src.y];Z=[src.z]'>JMP</a>) (<A HREF='?_src_=holder;adminplayerfollow=\ref[src]'>FLW</a>) with \a [P] in [get_area(firingMob)]")
+			log_ffattack("[key_name(firingMob)] shot [key_name(src)] with [P] in [AREACOORD(T)].")
+			msg_admin_ff("[ADMIN_TPMONTY(firingMob)] shot [ADMIN_TPMONTY(src)] with [P] in [ADMIN_VERBOSEJMP(T)].")
 			round_statistics.total_bullet_hits_on_marines++
 		else
 			log_combat(firingMob, src, "shot", P)
-			msg_admin_attack("[key_name(firingMob)] (<A HREF='?_src_=holder;adminmoreinfo=\ref[firingMob]'>?</A>) (<A HREF='?_src_=holder;adminplayerobservecoodjump=1;X=[firingMob.x];Y=[firingMob.y];Z=[firingMob.z]'>JMP</a>) (<A HREF='?_src_=holder;adminplayerfollow=\ref[firingMob]'>FLW</a>) shot [key_name(src)] (<A HREF='?_src_=holder;adminmoreinfo=\ref[src]'>?</A>) (<A HREF='?_src_=holder;adminplayerobservecoodjump=1;X=[src.x];Y=[src.y];Z=[src.z]'>JMP</a>) (<A HREF='?_src_=holder;adminplayerfollow=\ref[src]'>FLW</a>) with \a [P] in [get_area(firingMob)]")
+			msg_admin_attack("[ADMIN_TPMONTY(firingMob)] shot [ADMIN_TPMONTY(src)] with [P] in [ADMIN_VERBOSEJMP(T)].")
 		return
 
 	if(P.firer)
 		log_combat(P.firer, src, "shot", P)
-		msg_admin_attack("[key_name(P.firer)] (<A HREF='?_src_=holder;adminmoreinfo=\ref[P.firer]'>?</A>) (<A HREF='?_src_=holder;adminplayerobservecoodjump=1;X=[P.firer.x];Y=[P.firer.y];Z=[P.firer.z]'>JMP</a>) (<A HREF='?_src_=holder;adminplayerfollow=\ref[P.firer]'>FLW</a>) shot [key_name(src)] (<A HREF='?_src_=holder;adminmoreinfo=\ref[src]'>?</A>) (<A HREF='?_src_=holder;adminplayerobservecoodjump=1;X=[src.x];Y=[src.y];Z=[src.z]'>JMP</a>) (<A HREF='?_src_=holder;adminplayerfollow=\ref[src]'>FLW</a>) with a [P]")
+		msg_admin_attack("[ADMIN_TPMONTY(P.firer)] shot [ADMIN_TPMONTY(src)] with a [P]")
 	else
-		log_message("<b>SOMETHING??</b> shot <b>[key_name(src)]</b> with a <b>[P]</b>", LOG_ATTACK)
-		msg_admin_attack("SOMETHING?? shot [key_name(src)] (<A HREF='?_src_=holder;adminmoreinfo=\ref[src]'>?</A>) (<A HREF='?_src_=holder;adminplayerobservecoodjump=1;X=[src.x];Y=[src.y];Z=[src.z]'>JMP</a>) (<A HREF='?_src_=holder;adminplayerfollow=\ref[src]'>FLW</a>) with a [P])")
+		log_message("SOMETHING?? shot [key_name(src)] with a [P]", LOG_ATTACK)
+		msg_admin_attack("SOMETHING?? shot [ADMIN_TPMONTY(src)] with a [P])")
 
 //Abby -- Just check if they're 1 tile horizontal or vertical, no diagonals
 /proc/get_adj_simple(atom/Loc1,atom/Loc2)

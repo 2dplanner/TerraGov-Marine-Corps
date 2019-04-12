@@ -3,11 +3,6 @@
 /obj/item/circuitboard/computer
 
 
-/obj/item/circuitboard/computer/message_monitor
-	name = "Circuit board (Message Monitor)"
-	build_path = /obj/machinery/computer/message_monitor
-	origin_tech = "programming=3"
-
 //TODO: Move these into computer/camera.dm
 /obj/item/circuitboard/computer/security
 	name = "Circuit board (Security Camera Monitor)"
@@ -136,10 +131,6 @@
 	name = "Circuit board (Robotics Control)"
 	build_path = /obj/machinery/computer/robotics
 	origin_tech = "programming=3"
-/obj/item/circuitboard/computer/drone_control
-	name = "Circuit board (Drone Control)"
-	build_path = /obj/machinery/computer/drone_control
-	origin_tech = "programming=3"
 /obj/item/circuitboard/computer/arcade
 	name = "Circuit board (Arcade)"
 	build_path = /obj/machinery/computer/arcade
@@ -254,7 +245,7 @@
 
 
 /obj/item/circuitboard/computer/supplycomp/attackby(obj/item/I as obj, mob/user as mob)
-	if(istype(I,/obj/item/device/multitool))
+	if(istype(I,/obj/item/multitool))
 		var/catastasis = src.contraband_enabled
 		var/opposite_catastasis
 		if(catastasis)
@@ -292,7 +283,7 @@
 			to_chat(user, "<span class='notice'>You [locked ? "" : "un"]lock the circuit controls.</span>")
 		else
 			to_chat(user, "<span class='warning'>Access denied.</span>")
-	else if(istype(I,/obj/item/device/multitool))
+	else if(istype(I,/obj/item/multitool))
 		if(locked)
 			to_chat(user, "<span class='warning'>Circuit controls are locked.</span>")
 			return

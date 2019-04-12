@@ -12,16 +12,15 @@
 	var/unlocked = 0
 	var/open = 0
 	var/brightness_on = 7		//can't remember what the maxed out value is
-	unacidable = 1
+	resistance_flags = UNACIDABLE
 
-	New()
-		..()
-		spawn(1)
-			cell = new /obj/item/cell(src)
+/obj/machinery/floodlight/Initialize()
+	. = ..()
+	cell = new /obj/item/cell(src)
 
-	Destroy()
-		SetLuminosity(0)
-		. = ..()
+/obj/machinery/floodlight/Destroy()
+	SetLuminosity(0)
+	return ..()
 
 /obj/machinery/floodlight/proc/updateicon()
 	icon_state = "flood[open ? "o" : ""][open && cell ? "b" : ""]0[on]"
@@ -58,7 +57,7 @@
 		on = 0
 		to_chat(user, "<span class='notice'>You turn off the light.</span>")
 		SetLuminosity(0)
-		unacidable = 1
+		ENABLE_BITFIELD(resistance_flags, UNACIDABLE)
 	else
 		if(!cell)
 			return
@@ -67,7 +66,7 @@
 		on = 1
 		to_chat(user, "<span class='notice'>You turn on the light.</span>")
 		SetLuminosity(brightness_on)
-		unacidable = 0
+		DISABLE_BITFIELD(resistance_flags, UNACIDABLE)
 
 	updateicon()
 
@@ -76,7 +75,7 @@
 	if(!ishuman(user))
 		return
 
-	if (istype(W, /obj/item/tool/wrench))
+	if (iswrench(W))
 		if (!anchored)
 			anchored = 1
 			to_chat(user, "You anchor the [src] in place.")
@@ -84,7 +83,7 @@
 			anchored = 0
 			to_chat(user, "You remove the bolts from the [src].")
 
-	if (istype(W, /obj/item/tool/screwdriver))
+	if (isscrewdriver(W))
 		if (!open)
 			if(unlocked)
 				unlocked = 0
@@ -93,7 +92,7 @@
 				unlocked = 1
 				to_chat(user, "You unscrew the battery panel.")
 
-	if (istype(W, /obj/item/tool/crowbar))
+	if (iscrowbar(W))
 		if(unlocked)
 			if(open)
 				open = 0
@@ -120,7 +119,6 @@
 	desc = "A powerful light stationed near landing zones to provide better visibility."
 	icon_state = "flood01"
 	on = 1
-	in_use = 1
 	luminosity = 5
 	use_power = 0
 

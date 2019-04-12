@@ -13,21 +13,10 @@
 	var/h_b = 245.0
 
 
-/obj/machinery/computer/hologram_comp/New()
-	..()
-	spawn( 10 )
-		projector = locate(/obj/machinery/hologram/projector, get_step(src.loc, NORTH))
-		return
-	return
+/obj/machinery/computer/hologram_comp/Initialize()
+	. = ..()
+	projector = locate(/obj/machinery/hologram/projector, get_step(src.loc, NORTH))
 
-/obj/machinery/computer/hologram_comp/clicked(var/mob/user, var/list/mods)
-	if (mods["ctrl"] && mods["middle"])
-		if (!in_range(src, user))
-			return 1
-		show_console(user)
-		return 1
-
-	..()
 
 /obj/machinery/computer/hologram_comp/proc/render()
 	var/icon/I = new /icon('icons/mob/human.dmi', "body_m_s")

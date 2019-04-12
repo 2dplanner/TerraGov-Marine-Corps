@@ -25,21 +25,21 @@
 
 	if(istype(station))
 		station.com = hub
-		station.dir = dir
+		station.setDir(dir)
 
 	if(istype(hub))
 		hub.com = src
-		hub.dir = dir
+		hub.setDir(dir)
 
 /obj/machinery/computer/teleporter/attackby(I as obj, mob/living/user as mob)
 	if(istype(I, /obj/item/card/data/))
 		var/obj/item/card/data/C = I
-		if(stat & (NOPOWER|BROKEN) & (C.function != "teleporter"))
+		if(machine_stat & (NOPOWER|BROKEN) & (C.function != "teleporter"))
 			src.attack_hand()
 
 		var/obj/L = null
 
-		for(var/obj/effect/landmark/sloc in landmarks_list)
+		for(var/obj/effect/landmark/sloc in GLOB.landmarks_list)
 			if(sloc.name != C.data) continue
 			if(locate(/mob/living) in sloc.loc) continue
 			L = sloc
@@ -84,17 +84,17 @@
 	src.attack_hand()
 
 /obj/machinery/computer/teleporter/attack_hand()
-	if(stat & (NOPOWER|BROKEN))
+	if(machine_stat & (NOPOWER|BROKEN))
 		return
 
 	var/list/L = list()
 	var/list/areaindex = list()
 
-	for(var/obj/item/device/radio/beacon/R in item_list)
+	for(var/obj/item/radio/beacon/R in GLOB.item_list)
 		var/turf/T = get_turf(R)
 		if (!T)
 			continue
-		if(T.z == 2 || T.z > 7)
+		if(is_centcom_level(T.z) || T.z > 7)
 			continue
 		var/tmpname = T.loc.name
 		if(areaindex[tmpname])
@@ -103,7 +103,7 @@
 			areaindex[tmpname] = 1
 		L[tmpname] = R
 
-	for (var/obj/item/implant/tracking/I in item_list)
+	for (var/obj/item/implant/tracking/I in GLOB.item_list)
 		if (!I.implanted || !ismob(I.loc))
 			continue
 		else
@@ -113,7 +113,7 @@
 					continue
 			var/turf/T = get_turf(M)
 			if(T)	continue
-			if(T.z == 2)	continue
+			if(is_centcom_level(T.z))	continue
 			var/tmpname = M.real_name
 			if(areaindex[tmpname])
 				tmpname = "[tmpname] ([++areaindex[tmpname]])"
@@ -139,7 +139,7 @@
 	set src in oview(1)
 	set desc = "ID Tag:"
 
-	if(stat & (NOPOWER|BROKEN) || !istype(usr,/mob/living))
+	if(machine_stat & (NOPOWER|BROKEN) || !istype(usr,/mob/living))
 		return
 	if (t)
 		src.id = t
@@ -191,7 +191,7 @@
 		for(var/mob/O in hearers(src, null))
 			O.show_message("<span class='warning'> Failure: Cannot authenticate locked on coordinates. Please reinstate coordinate matrix.</span>")
 		return
-	if (istype(M, /atom/movable))
+	if (ismovableatom(M))
 		if(prob(5) && !accurate) //oh dear a problem, put em in deep space
 			do_teleport(M, locate(rand((2*TRANSITIONEDGE), world.maxx - (2*TRANSITIONEDGE)), rand((2*TRANSITIONEDGE), world.maxy - (2*TRANSITIONEDGE)), 3), 2)
 		else
@@ -218,7 +218,7 @@
 		for(var/mob/O in viewers(M, null))
 			O.show_message(text("<span class='danger'>The [] bounces off of the portal!</span>", M.name), 1)
 		return
-	if (istype(M, /mob/living))
+	if (isliving(M))
 		var/mob/living/MM = M
 		if(MM.check_contents_for(/obj/item/disk/nuclear))
 			to_chat(MM, "<span class='warning'>Something you are carrying seems to be unable to pass through the portal. Better drop it if you want to go through.</span>")
@@ -235,7 +235,7 @@
 					disky = 1
 		if (istype(O, /obj/item/disk/nuclear))
 			disky = 1
-		if (istype(O, /mob/living))
+		if (isliving(O))
 			var/mob/living/MM = O
 			if(MM.check_contents_for(/obj/item/disk/nuclear))
 				disky = 1
@@ -245,7 +245,7 @@
 		return
 
 //Bags of Holding cause bluespace teleportation to go funky. --NeoFite
-	if (istype(M, /mob/living))
+	if (isliving(M))
 		var/mob/living/MM = M
 		if(MM.check_contents_for(/obj/item/storage/backpack/holding))
 			to_chat(MM, "<span class='warning'>The Bluespace interface on your Bag of Holding interferes with the teleport!</span>")
@@ -263,7 +263,7 @@
 					precision = rand(1,100)
 		if (istype(O, /obj/item/storage/backpack/holding))
 			precision = rand(1,100)
-		if (istype(O, /mob/living))
+		if (isliving(O))
 			var/mob/living/MM = O
 			if(MM.check_contents_for(/obj/item/storage/backpack/holding))
 				precision = rand(1,100)
@@ -329,7 +329,7 @@
 		src.engage()
 
 /obj/machinery/teleport/station/proc/engage()
-	if(stat & (BROKEN|NOPOWER))
+	if(machine_stat & (BROKEN|NOPOWER))
 		return
 
 	if (com)
@@ -342,7 +342,7 @@
 	return
 
 /obj/machinery/teleport/station/proc/disengage()
-	if(stat & (BROKEN|NOPOWER))
+	if(machine_stat & (BROKEN|NOPOWER))
 		return
 
 	if (com)
@@ -359,7 +359,7 @@
 	set category = "Object"
 	set src in oview(1)
 
-	if(stat & (BROKEN|NOPOWER) || !istype(usr,/mob/living))
+	if(machine_stat & (BROKEN|NOPOWER) || !istype(usr,/mob/living))
 		return
 
 	if (com && !active)
@@ -377,7 +377,7 @@
 
 /obj/machinery/teleport/station/power_change()
 	..()
-	if(stat & NOPOWER)
+	if(machine_stat & NOPOWER)
 		icon_state = "controller-p"
 
 		if(com)

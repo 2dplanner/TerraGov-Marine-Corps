@@ -41,7 +41,7 @@
 
 /obj/machinery/light_construct/attackby(obj/item/W as obj, mob/user as mob)
 	src.add_fingerprint(user)
-	if (istype(W, /obj/item/tool/wrench))
+	if(iswrench(W))
 		if (src.stage == 1)
 			playsound(src.loc, 'sound/items/Ratchet.ogg', 25, 1)
 			to_chat(usr, "You begin deconstructing [src].")
@@ -60,7 +60,7 @@
 			to_chat(usr, "You have to unscrew the case first.")
 			return
 
-	if(istype(W, /obj/item/tool/wirecutters))
+	if(iswirecutter(W))
 		if (src.stage != 2)
 			return
 		src.stage = 1
@@ -75,7 +75,7 @@
 		playsound(src.loc, 'sound/items/Wirecutter.ogg', 25, 1)
 		return
 
-	if(istype(W, /obj/item/stack/cable_coil))
+	if(iscablecoil(W))
 		if (src.stage != 1)
 			return
 		var/obj/item/stack/cable_coil/coil = W
@@ -90,7 +90,7 @@
 				"You add wires to [src].")
 		return
 
-	if(istype(W, /obj/item/tool/screwdriver))
+	if(isscrewdriver(W))
 		if (src.stage == 2)
 			switch(fixture_type)
 				if ("tube")
@@ -109,7 +109,7 @@
 				if ("bulb")
 					newlight = new /obj/machinery/light/small/built(src.loc)
 
-			newlight.dir = src.dir
+			newlight.setDir(src.dir)
 			src.transfer_fingerprints_to(newlight)
 			qdel(src)
 			return
@@ -241,8 +241,8 @@
 			if(rigged)
 				if(status == LIGHT_OK && trigger)
 
-					log_admin("LOG: Rigged light explosion, last touched by [fingerprintslast]")
-					message_admins("LOG: Rigged light explosion, last touched by [fingerprintslast]")
+					log_admin("Rigged light explosion, last touched by [key_name(fingerprintslast)].")
+					message_admins("Rigged light explosion, last touched by [key_name_admin(fingerprintslast)].")
 
 					explode()
 			else if( prob( min(60, switchcount*switchcount*0.01) ) )
@@ -289,8 +289,8 @@
 /obj/machinery/light/attackby(obj/item/W, mob/user)
 
 	//Light replacer code
-	if(istype(W, /obj/item/device/lightreplacer))
-		var/obj/item/device/lightreplacer/LR = W
+	if(istype(W, /obj/item/lightreplacer))
+		var/obj/item/lightreplacer/LR = W
 		if(isliving(user))
 			var/mob/living/U = user
 			LR.ReplaceLight(src, U)
@@ -319,8 +319,8 @@
 
 					if(on && rigged)
 
-						log_admin("LOG: Rigged light explosion, last touched by [fingerprintslast]")
-						message_admins("LOG: Rigged light explosion, last touched by [fingerprintslast]")
+						log_admin("Rigged light explosion, last touched by [key_name(fingerprintslast)].")
+						message_admins("Rigged light explosion, last touched by [key_name_admin(fingerprintslast)].")
 
 						explode()
 			else
@@ -351,7 +351,7 @@
 
 	// attempt to stick weapon into light socket
 	else if(status == LIGHT_EMPTY)
-		if(istype(W, /obj/item/tool/screwdriver)) //If it's a screwdriver open it.
+		if(isscrewdriver(W)) //If it's a screwdriver open it.
 			playsound(src.loc, 'sound/items/Screwdriver.ogg', 25, 1)
 			user.visible_message("[user.name] opens [src]'s casing.", \
 				"You open [src]'s casing.", "You hear a noise.")
@@ -364,7 +364,7 @@
 				if("bulb")
 					newlight = new /obj/machinery/light_construct/small(src.loc)
 					newlight.icon_state = "bulb-construct-stage2"
-			newlight.dir = src.dir
+			newlight.setDir(dir)
 			newlight.stage = 2
 			newlight.fingerprints = src.fingerprints
 			newlight.fingerprintshidden = src.fingerprintshidden
@@ -682,8 +682,8 @@
 
 		if(S.reagents.has_reagent("phoron", 5))
 
-			log_admin("LOG: [user.name] ([user.ckey]) injected a light with phoron, rigging it to explode.")
-			message_admins("LOG: [user.name] ([user.ckey]) injected a light with phoron, rigging it to explode.")
+			log_admin("[key_name(user)] injected a light with phoron, rigging it to explode.")
+			message_admins("[ADMIN_TPMONTY(user)] injected a light with phoron, rigging it to explode.")
 
 			rigged = TRUE
 
@@ -701,7 +701,7 @@
 		return
 	if(istype(target, /obj/machinery/light))
 		return
-	if(user.a_intent != "hurt")
+	if(user.a_intent != INTENT_HARM)
 		return
 
 	shatter()
@@ -728,11 +728,7 @@
 	idle_power_usage = 2
 	active_power_usage = 20
 	power_channel = LIGHT //Lights are calc'd via area so they dont need to be in the machine list
-	unacidable = TRUE
-
-//Don't allow blowing those up, so Marine nades don't fuck them
-/obj/machinery/landinglight/ex_act(severity)
-	return
+	resistance_flags = UNACIDABLE|INDESTRUCTIBLE
 
 /obj/machinery/landinglight/New()
 	turn_off()
@@ -742,10 +738,18 @@
 	SetLuminosity(0)
 
 /obj/machinery/landinglight/ds1
-	id = "TGS Theseus Dropship 1" // ID for landing zone
+	
+
+/obj/machinery/landinglight/ds1/New()
+	. = ..()
+	id = "[CONFIG_GET(string/ship_name)] Dropship 1"
 
 /obj/machinery/landinglight/ds2
-	id = "TGS Theseus Dropship 2" // ID for landing zone
+
+
+/obj/machinery/landinglight/ds2/New()
+	. = ..()
+	id = "[CONFIG_GET(string/ship_name)] Dropship 2" // ID for landing zone
 
 /obj/machinery/landinglight/proc/turn_on()
 	icon_state = "landingstripe0"

@@ -107,7 +107,7 @@
 		var/obj/structure/bed/nest/N = locate() in get_turf(src)
 		if(N)
 			M.buckled = N
-			M.dir = N.dir
+			M.setDir(N.dir)
 			M.update_canmove()
 			N.buckled_mob = M
 			N.afterbuckle(M)
@@ -124,7 +124,7 @@
 	corpsesuit = /obj/item/clothing/suit/armor/vest
 	corpseshoes = /obj/item/clothing/shoes/swat
 	corpsegloves = /obj/item/clothing/gloves/swat
-	corpseradio = /obj/item/device/radio/headset
+	corpseradio = /obj/item/radio/headset
 	corpsemask = /obj/item/clothing/mask/gas
 	corpsehelmet = /obj/item/clothing/head/helmet/swat
 	corpseback = /obj/item/storage/backpack
@@ -140,7 +140,7 @@
 	corpsesuit = /obj/item/clothing/suit/space/rig/syndi
 	corpseshoes = /obj/item/clothing/shoes/swat
 	corpsegloves = /obj/item/clothing/gloves/swat
-	corpseradio = /obj/item/device/radio/headset
+	corpseradio = /obj/item/radio/headset
 	corpsemask = /obj/item/clothing/mask/gas/syndicate
 	corpsehelmet = /obj/item/clothing/head/helmet/space/rig/syndi
 	corpseback = /obj/item/tank/jetpack/oxygen
@@ -157,7 +157,7 @@
 	corpsesuit = /obj/item/clothing/suit/armor/vest
 	corpseshoes = /obj/item/clothing/shoes/swat
 	corpsegloves = /obj/item/clothing/gloves/swat
-	corpseradio = /obj/item/device/radio/headset
+	corpseradio = /obj/item/radio/headset
 	corpsemask = /obj/item/clothing/mask/gas
 	corpsehelmet = /obj/item/clothing/head/helmet/swat
 	corpseback = /obj/item/storage/backpack
@@ -216,8 +216,8 @@
 	name = "Doctor"
 	corpseuniform = /obj/item/clothing/under/colonist
 	corpsesuit = /obj/item/clothing/suit/storage/labcoat
-	corpseback = /obj/item/storage/backpack/medic
-	corpsepocket1 = /obj/item/device/flashlight/pen
+	corpseback = /obj/item/storage/backpack/corpsman
+	corpsepocket1 = /obj/item/flashlight/pen
 	corpseshoes = /obj/item/clothing/shoes/black
 	corpseid = 1
 	corpseidjob = "Medical Doctor"

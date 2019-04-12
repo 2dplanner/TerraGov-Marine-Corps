@@ -51,20 +51,15 @@
 
 
 
-/obj/machinery/bot/medbot/New()
-	..()
+/obj/machinery/bot/medbot/Initialize()
+	. = ..()
 	src.icon_state = "medibot[src.on]"
 
-	spawn(4)
-		if(src.skin)
-			src.overlays += image('icons/obj/aibots.dmi', "medskin_[src.skin]")
+	if(src.skin)
+		src.overlays += image('icons/obj/aibots.dmi', "medskin_[src.skin]")
 
-		src.botcard = new /obj/item/card/id(src)
-		if(isnull(src.botcard_access) || (src.botcard_access.len < 1))
-			var/datum/job/J = RoleAuthority ? RoleAuthority.roles_by_path[/datum/job/medical/doctor] : new /datum/job/medical/doctor
-			botcard.access = J.get_access()
-		else
-			src.botcard.access = src.botcard_access
+	src.botcard = new /obj/item/card/id(src)
+	botcard.access = ALL_MARINE_ACCESS
 	start_processing()
 
 /obj/machinery/bot/medbot/turn_on()
@@ -181,7 +176,7 @@
 	return
 
 /obj/machinery/bot/medbot/attackby(obj/item/W as obj, mob/user as mob)
-	if (istype(W, /obj/item/card/id)||istype(W, /obj/item/device/pda))
+	if (istype(W, /obj/item/card/id))
 		if (src.allowed(user) && !open && !emagged)
 			src.locked = !src.locked
 			to_chat(user, "<span class='notice'>Controls are now [src.locked ? "locked." : "unlocked."]</span>")
@@ -210,7 +205,7 @@
 
 	else
 		..()
-		if (health < maxhealth && !istype(W, /obj/item/tool/screwdriver) && W.force)
+		if (health < maxhealth && !isscrewdriver(W) && W.force)
 			step_to(src, (get_step_away(src,user)))
 
 /obj/machinery/bot/medbot/Emag(mob/user as mob)
@@ -264,7 +259,7 @@
 			src.speak(message)
 
 		for (var/mob/living/carbon/C in view(7,src)) //Time to find a patient!
-			if ((C.stat == 2) || !istype(C, /mob/living/carbon/human))
+			if ((C.stat == 2) || !ishuman(C))
 				continue
 
 			if ((C == src.oldpatient) && (world.time < src.last_found + 100))
@@ -470,9 +465,9 @@
 
 	new /obj/item/storage/firstaid(Tsec)
 
-	new /obj/item/device/assembly/prox_sensor(Tsec)
+	new /obj/item/assembly/prox_sensor(Tsec)
 
-	new /obj/item/device/healthanalyzer(Tsec)
+	new /obj/item/healthanalyzer(Tsec)
 
 	if(src.reagent_glass)
 		src.reagent_glass.loc = Tsec

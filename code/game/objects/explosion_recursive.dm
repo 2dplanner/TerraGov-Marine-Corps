@@ -21,8 +21,8 @@ proc/explosion_rec(turf/epicenter, power)
 	epicenter = get_turf(epicenter)
 	if(!epicenter) return
 
-	message_admins("Explosion with size ([power]) in area [epicenter.loc.name] ([epicenter.x],[epicenter.y],[epicenter.z])")
-	log_game("Explosion with size ([power]) in area [epicenter.loc.name] ")
+	log_game("Explosion with size ([power]) in [AREACOORD(epicenter.loc)].")
+	message_admins("Explosion with size ([power]) in area [ADMIN_VERBOSEJMP(epicenter.loc)].")
 
 	playsound(epicenter, 'sound/effects/explosionfar.ogg', 75, 1, max(round(8*power,1),14) )
 	playsound(epicenter, "explosion", 75, 1, max(round(4*power,1),7) )
@@ -96,9 +96,11 @@ proc/explosion_rec(turf/epicenter, power)
 	var/spread_power = power - src.explosion_resistance //This is the amount of power that will be spread to the tile in the direction of the blast
 	var/side_spread_power = power - 2 * src.explosion_resistance //This is the amount of power that will be spread to the side tiles
 	for(var/obj/O in src)
-		if(O.explosion_resistance)
-			spread_power -= O.explosion_resistance
-			side_spread_power -= O.explosion_resistance
+		if(!O.density)
+			continue // open doors, etc
+		var/bomb = O.armor.getRating("bomb")
+		spread_power -= bomb
+		side_spread_power -= bomb
 
 	var/turf/T = get_step(src, direction)
 	T.explosion_spread(spread_power, direction)

@@ -4,7 +4,7 @@
 	voice_name = "unknown"
 	icon = 'icons/mob/human.dmi'
 	icon_state = "body_m_s"
-	hud_possible = list(HEALTH_HUD,STATUS_HUD, STATUS_HUD_OOC, STATUS_HUD_XENO_INFECTION,ID_HUD,WANTED_HUD,IMPLOYAL_HUD,IMPCHEM_HUD,IMPTRACK_HUD, SPECIALROLE_HUD, SQUAD_HUD)
+	hud_possible = list(HEALTH_HUD,STATUS_HUD, STATUS_HUD_OOC, STATUS_HUD_XENO_INFECTION,ID_HUD,WANTED_HUD,IMPLOYAL_HUD,IMPCHEM_HUD,IMPTRACK_HUD, SPECIALROLE_HUD, SQUAD_HUD, STATUS_HUD_OBSERVER_INFECTION, ORDER_HUD)
 	var/embedded_flag	  //To check if we've need to roll for damage on movement while an item is imbedded in us.
 	var/regenZ = 1 //Temp zombie thing until I write a better method ~Apop
 
@@ -129,13 +129,28 @@
 
 	. = ..()
 
+	GLOB.human_mob_list += src
+	GLOB.alive_human_list += src
 	round_statistics.total_humans_created++
 
 	if(dna)
 		dna.real_name = real_name
 
 	prev_gender = gender // Debug for plural genders
+	
 
+	//makes order hud visible
+	var/datum/mob_hud/H = huds[MOB_HUD_ORDER]
+	H.add_hud_to(usr)
+
+
+/mob/living/carbon/human/vv_get_dropdown()
+	. = ..()
+	. += "---"
+	.["Set Species"] = "?_src_=vars;[HrefToken()];setspecies=[REF(src)]"
+	.["Purrbation"] = "?_src_=vars;[HrefToken()];purrbation=[REF(src)]"
+	.["Drop Everything"] = "?_src_=vars;[HrefToken()];dropeverything=[REF(src)]"
+	.["Copy Outfit"] = "?_src_=vars;[HrefToken()];copyoutfit=[REF(src)]"
 
 
 /mob/living/carbon/human/prepare_huds()
@@ -147,115 +162,126 @@
 	sec_hud_set_implants()
 	sec_hud_set_security_status()
 	hud_set_squad()
+	hud_set_order()
 	//and display them
 	add_to_all_mob_huds()
 
 
 
 /mob/living/carbon/human/Destroy()
+	if(assigned_squad)
+		SSdirection.stop_tracking(assigned_squad.tracking_id, src) // failsafe to ensure they're definite not in the list
 	assigned_squad?.clean_marine_from_squad(src,FALSE)
 	remove_from_all_mob_huds()
+	GLOB.human_mob_list -= src
+	GLOB.alive_human_list -= src
+	GLOB.dead_human_list -= src
 	return ..()
 
 /mob/living/carbon/human/Stat()
-	if (!..())
-		return 0
+	. = ..()
 
-	if(EvacuationAuthority)
-		var/eta_status = EvacuationAuthority.get_status_panel_eta()
+	if(statpanel("Stats"))
+		var/eta_status = SSevacuation?.get_status_panel_eta()
 		if(eta_status)
-			stat(null, eta_status)
+			stat("Evacuation in:", eta_status)
 
-	if(internal)
-		stat("Internal Atmosphere Info", internal.name)
-		stat("Tank Pressure", internal.pressure)
-		stat("Distribution Pressure", internal.distribute_pressure)
+		if(internal)
+			stat("Internal Atmosphere Info", internal.name)
+			stat("Tank Pressure", internal.pressure)
+			stat("Distribution Pressure", internal.distribute_pressure)
 
-	if(assigned_squad)
-		if(assigned_squad.primary_objective)
-			stat("Primary Objective: ", assigned_squad.primary_objective)
-		if(assigned_squad.secondary_objective)
-			stat("Secondary Objective: ", assigned_squad.secondary_objective)
+		if(assigned_squad)
+			if(assigned_squad.primary_objective)
+				stat("Primary Objective: ", assigned_squad.primary_objective)
+			if(assigned_squad.secondary_objective)
+				stat("Secondary Objective: ", assigned_squad.secondary_objective)
 
-	if(mobility_aura)
-		stat(null, "You are affected by a MOVE order.")
-	if(protection_aura)
-		stat(null, "You are affected by a HOLD order.")
-	if(marskman_aura)
-		stat(null, "You are affected by a FOCUS order.")
+		if(mobility_aura)
+			stat(null, "You are affected by a MOVE order.")
+		if(protection_aura)
+			stat(null, "You are affected by a HOLD order.")
+		if(marksman_aura)
+			stat(null, "You are affected by a FOCUS order.")
 
 /mob/living/carbon/human/ex_act(severity)
 	flash_eyes()
 
 	var/b_loss = null
 	var/f_loss = null
+	var/armor = max(0, 1 - getarmor(null, "bomb"))
 	switch(severity)
 		if(1)
-			b_loss += rand(125, 175)
-			if(!prob(getarmor(null, "bomb") + 75)) //Much less likely to gib than before
-				gib()
-				return
-			else
-				var/atom/target = get_edge_target_turf(src, get_dir(src, get_step_away(src, src)))
-				throw_at(target, 200, 4)
-		if(2)
-			b_loss += rand(50, 70)
-			f_loss += rand(50, 70)
+			b_loss += rand(120, 160) * armor	//Probably instant death
+			f_loss += rand(120, 160) * armor	//Probably instant death
 
-			if(prob(getarmor(null, "bomb")))
-				b_loss = b_loss/1.5
-				f_loss = f_loss/1.5
+			var/atom/target = get_edge_target_turf(src, get_dir(src, get_step_away(src, src)))
+			throw_at(target, 200, 4)
 
 			if(!istype(wear_ear, /obj/item/clothing/ears/earmuffs))
-				ear_damage += 30
-				ear_deaf += 120
-			if(prob(70))
-				KnockOut(10)
+				ear_damage += 60 * armor
+				ear_deaf += 240 * armor
+
+			adjust_stagger(12 * armor)
+			add_slowdown(round(12 * armor,0.1))
+			KnockOut(8 * armor) //This should kill you outright, so if you're somehow alive I don't feel too bad if you get KOed
+
+		if(2)
+			b_loss += rand(60, 80) * armor	//Ouchie time. Armor makes it survivable
+			f_loss += rand(60, 80) * armor	//Ouchie time. Armor makes it survivable
+
+			if(!istype(wear_ear, /obj/item/clothing/ears/earmuffs))
+				ear_damage += 30 * armor
+				ear_deaf += 120 * armor
+
+			adjust_stagger(6 * armor)
+			add_slowdown(round(6 * armor,0.1))
+			KnockDown(4 * armor)
 
 		if(3)
-			b_loss += rand(50, 70)
-			if(prob(getarmor(null, "bomb")))
-				b_loss = b_loss/2
+			b_loss += rand(30, 40) * armor
+			f_loss += rand(30, 40) * armor
+
 			if(!istype(wear_ear, /obj/item/clothing/ears/earmuffs))
-				ear_damage += 15
-				ear_deaf += 60
-			if(prob(50))
-				KnockOut(10)
+				ear_damage += 15 * armor
+				ear_deaf += 60 * armor
+
+			adjust_stagger(3 * armor)
+			add_slowdown(round(3 * armor,0.1))
+			KnockDown(2 * armor)
 
 	var/update = 0
 
 	//Focus half the blast on one organ
 	var/datum/limb/take_blast = pick(limbs)
-	update |= take_blast.take_damage(b_loss * 0.5, f_loss * 0.5, used_weapon = "Explosive blast")
+	update |= take_blast.take_damage_limb(b_loss * 0.5, f_loss * 0.5)
 
 	//Distribute the remaining half all limbs equally
 	b_loss *= 0.5
 	f_loss *= 0.5
 
-	var/weapon_message = "Explosive Blast"
-
 	for(var/datum/limb/temp in limbs)
 		switch(temp.name)
 			if("head")
-				update |= temp.take_damage(b_loss * 0.2, f_loss * 0.2, used_weapon = weapon_message)
+				update |= temp.take_damage_limb(b_loss * 0.2, f_loss * 0.2)
 			if("chest")
-				update |= temp.take_damage(b_loss * 0.4, f_loss * 0.4, used_weapon = weapon_message)
+				update |= temp.take_damage_limb(b_loss * 0.4, f_loss * 0.4)
 			if("l_arm")
-				update |= temp.take_damage(b_loss * 0.05, f_loss * 0.05, used_weapon = weapon_message)
+				update |= temp.take_damage_limb(b_loss * 0.05, f_loss * 0.05)
 			if("r_arm")
-				update |= temp.take_damage(b_loss * 0.05, f_loss * 0.05, used_weapon = weapon_message)
+				update |= temp.take_damage_limb(b_loss * 0.05, f_loss * 0.05)
 			if("l_leg")
-				update |= temp.take_damage(b_loss * 0.05, f_loss * 0.05, used_weapon = weapon_message)
+				update |= temp.take_damage_limb(b_loss * 0.05, f_loss * 0.05)
 			if("r_leg")
-				update |= temp.take_damage(b_loss * 0.05, f_loss * 0.05, used_weapon = weapon_message)
+				update |= temp.take_damage_limb(b_loss * 0.05, f_loss * 0.05)
 			if("r_foot")
-				update |= temp.take_damage(b_loss * 0.05, f_loss * 0.05, used_weapon = weapon_message)
+				update |= temp.take_damage_limb(b_loss * 0.05, f_loss * 0.05)
 			if("l_foot")
-				update |= temp.take_damage(b_loss * 0.05, f_loss * 0.05, used_weapon = weapon_message)
+				update |= temp.take_damage_limb(b_loss * 0.05, f_loss * 0.05)
 			if("r_arm")
-				update |= temp.take_damage(b_loss * 0.05, f_loss * 0.05, used_weapon = weapon_message)
+				update |= temp.take_damage_limb(b_loss * 0.05, f_loss * 0.05)
 			if("l_arm")
-				update |= temp.take_damage(b_loss * 0.05, f_loss * 0.05, used_weapon = weapon_message)
+				update |= temp.take_damage_limb(b_loss * 0.05, f_loss * 0.05)
 	if(update)	UpdateDamageIcon()
 	return 1
 
@@ -278,8 +304,6 @@
 
 
 /mob/living/carbon/human/proc/implant_loyalty(mob/living/carbon/human/M, override = FALSE) // Won't override by default.
-	if(!CONFIG_GET(flag/use_loyalty_implants) && !override) return // Nuh-uh.
-
 	var/obj/item/implant/loyalty/L = new/obj/item/implant/loyalty(M)
 	L.imp_in = M
 	L.implanted = 1
@@ -317,7 +341,7 @@
 	<BR><B>Head:</B> <A href='?src=\ref[src];item=[SLOT_HEAD]'>[(head ? head : "Nothing")]</A>
 	<BR><B>Shoes:</B> <A href='?src=\ref[src];item=[SLOT_SHOES]'>[(shoes ? shoes : "Nothing")]</A>
 	<BR><B>Belt:</B> <A href='?src=\ref[src];item=[SLOT_BELT]'>[(belt ? belt : "Nothing")]</A> [((istype(wear_mask, /obj/item/clothing/mask) && istype(belt, /obj/item/tank) && !internal) ? " <A href='?src=\ref[src];internal=1'>Set Internal</A>" : "")]
-	<BR><B>Uniform:</B> <A href='?src=\ref[src];item=[SLOT_W_UNIFORM]'>[(w_uniform ? w_uniform : "Nothing")]</A> [(suit) ? ((suit.has_sensor == 1) ? " <A href='?src=\ref[src];sensor=1'>Sensors</A>" : "") :]
+	<BR><B>Uniform:</B> <A href='?src=\ref[src];item=[SLOT_W_UNIFORM]'>[(w_uniform ? w_uniform : "Nothing")]</A> [(suit) ? ((suit.has_sensor == 1) ? " <A href='?src=\ref[src];sensor=1'>Sensors</A>" : "") : ""]
 	<BR><B>(Exo)Suit:</B> <A href='?src=\ref[src];item=[SLOT_WEAR_SUIT]'>[(wear_suit ? wear_suit : "Nothing")]</A>
 	<BR><B>Back:</B> <A href='?src=\ref[src];item=[SLOT_BACK]'>[(back ? back : "Nothing")]</A> [((istype(wear_mask, /obj/item/clothing/mask) && istype(back, /obj/item/tank) && !( internal )) ? " <A href='?src=\ref[src];internal=1'>Set Internal</A>" : "")]
 	<BR><B>ID:</B> <A href='?src=\ref[src];item=[SLOT_WEAR_ID]'>[(wear_id ? wear_id : "Nothing")]</A>
@@ -353,14 +377,8 @@
 //gets assignment from ID or ID inside PDA or PDA itself
 //Useful when player do something with computers
 /mob/living/carbon/human/proc/get_assignment(var/if_no_id = "No id", var/if_no_job = "No job")
-	var/obj/item/device/pda/pda = wear_id
 	var/obj/item/card/id/id = wear_id
-	if (istype(pda))
-		if (pda.id && istype(pda.id, /obj/item/card/id))
-			. = pda.id.assignment
-		else
-			. = pda.ownjob
-	else if (istype(id))
+	if (istype(id))
 		. = id.assignment
 	else
 		return if_no_id
@@ -371,14 +389,8 @@
 //gets name from ID or ID inside PDA or PDA itself
 //Useful when player do something with computers
 /mob/living/carbon/human/proc/get_authentification_name(var/if_no_id = "Unknown")
-	var/obj/item/device/pda/pda = wear_id
 	var/obj/item/card/id/id = wear_id
-	if (istype(pda))
-		if (pda.id)
-			. = pda.id.registered_name
-		else
-			. = pda.owner
-	else if (istype(id))
+	if (istype(id))
 		. = id.registered_name
 	else
 		return if_no_id
@@ -409,7 +421,7 @@
 //Returns "Unknown" if facially disfigured and real_name if not. Useful for setting name when polyacided or when updating a human's name variable
 /mob/living/carbon/human/proc/get_face_name()
 	var/datum/limb/head/head = get_limb("head")
-	if( !head || head.disfigured || (head.status & LIMB_DESTROYED) || !real_name || (HUSK in mutations) )	//disfigured. use id-name if possible
+	if( !head || head.disfigured || (head.limb_status & LIMB_DESTROYED) || !real_name || (HUSK in mutations) )	//disfigured. use id-name if possible
 		return "Unknown"
 	return real_name
 
@@ -417,9 +429,6 @@
 //Useful when player is being seen by other mobs
 /mob/living/carbon/human/proc/get_id_name(var/if_no_id = "Unknown")
 	. = if_no_id
-	if(istype(wear_id,/obj/item/device/pda))
-		var/obj/item/device/pda/P = wear_id
-		return P.owner
 	if(wear_id)
 		var/obj/item/card/id/I = wear_id.GetID()
 		if(I)
@@ -482,7 +491,7 @@
 
 	if (href_list["item"])
 		var/slot = text2num(href_list["item"])
-		if(!usr.is_mob_incapacitated() && Adjacent(usr))
+		if(!usr.incapacitated() && Adjacent(usr))
 			if(slot == SLOT_WEAR_ID)
 				if(istype(wear_id, /obj/item/card/id/dogtag))
 					var/obj/item/card/id/dogtag/DT = wear_id
@@ -534,9 +543,9 @@
 
 				else
 					if(r_store || l_store)
-						if(r_store && !(r_store.flags_item & NODROP) && !(r_store.flags_inventory & CANTSTRIP))
+						if(r_store && !(r_store.flags_item & NODROP))
 							dropItemToGround(r_store)
-						if(l_store && !(l_store.flags_item & NODROP) && !(l_store.flags_inventory & CANTSTRIP))
+						if(l_store && !(l_store.flags_item & NODROP))
 							dropItemToGround(l_store)
 					else
 						to_chat(usr, "<span class='notice'>[src]'s pockets are empty.</span>")
@@ -574,7 +583,7 @@
 						if (internal)
 							visible_message("<span class='notice'>[src] is now running on internals.</span>", null, null, 1)
 							internal.add_fingerprint(usr)
-							if (hud_used. && hud_used.internals)
+							if (hud_used && hud_used.internals)
 								hud_used.internals.icon_state = "internal1"
 
 				// Update strip window
@@ -589,7 +598,7 @@
 			var/count = 0
 			for(var/X in limbs)
 				var/datum/limb/E = X
-				if(E.status & LIMB_SPLINTED)
+				if(E.limb_status & LIMB_SPLINTED)
 					count = 1
 					break
 			if(count)
@@ -599,8 +608,8 @@
 					var/limbcount = 0
 					for(var/organ in list("l_leg","r_leg","l_arm","r_arm","r_hand","l_hand","r_foot","l_foot","chest","head","groin"))
 						var/datum/limb/o = get_limb(organ)
-						if (o && o.status & LIMB_SPLINTED)
-							o.status &= ~LIMB_SPLINTED
+						if (o && o.limb_status & LIMB_SPLINTED)
+							o.limb_status &= ~LIMB_SPLINTED
 							limbcount++
 					if(limbcount)
 						var/obj/item/W = new /obj/item/stack/medical/splint(loc, limbcount)
@@ -639,16 +648,16 @@
 
 
 	if (href_list["squadfireteam"])
-		if(!usr.is_mob_incapacitated() && get_dist(usr, src) <= 7 && hasHUD(usr,"squadleader"))
+		if(!usr.incapacitated() && get_dist(usr, src) <= 7 && hasHUD(usr,"squadleader"))
 			var/mob/living/carbon/human/H = usr
 			if(mind)
 				var/obj/item/card/id/ID = get_idcard()
-				if(ID && (ID.rank in ROLES_MARINES))//still a marine, with an ID.
+				if(ID && (ID.rank in JOBS_MARINES))//still a marine, with an ID.
 					if(assigned_squad == H.assigned_squad) //still same squad
 						var/newfireteam = input(usr, "Assign this marine to a fireteam.", "Fire Team Assignment") as null|anything in list("None", "Fire Team 1", "Fire Team 2", "Fire Team 3")
-						if(H.is_mob_incapacitated() || get_dist(H, src) > 7 || !hasHUD(H,"squadleader")) return
+						if(H.incapacitated() || get_dist(H, src) > 7 || !hasHUD(H,"squadleader")) return
 						ID = get_idcard()
-						if(ID && ID.rank in ROLES_MARINES)//still a marine with an ID
+						if(ID && ID.rank in JOBS_MARINES)//still a marine with an ID
 							if(assigned_squad == H.assigned_squad) //still same squad
 								switch(newfireteam)
 									if("None") ID.assigned_fireteam = 0
@@ -674,9 +683,9 @@
 				perpname = name
 
 			if(perpname)
-				for (var/datum/data/record/E in data_core.general)
+				for (var/datum/data/record/E in GLOB.datacore.general)
 					if (E.fields["name"] == perpname)
-						for (var/datum/data/record/R in data_core.security)
+						for (var/datum/data/record/R in GLOB.datacore.security)
 							if (R.fields["id"] == E.fields["id"])
 
 								var/setcriminal = input(usr, "Specify a new criminal status for this person.", "Security HUD", R.fields["criminal"]) in list("None", "*Arrest*", "Incarcerated", "Released", "Cancel")
@@ -699,14 +708,11 @@
 			if(wear_id)
 				if(istype(wear_id,/obj/item/card/id))
 					perpname = wear_id:registered_name
-				else if(istype(wear_id,/obj/item/device/pda))
-					var/obj/item/device/pda/tempPda = wear_id
-					perpname = tempPda.owner
 			else
 				perpname = src.name
-			for (var/datum/data/record/E in data_core.general)
+			for (var/datum/data/record/E in GLOB.datacore.general)
 				if (E.fields["name"] == perpname)
-					for (var/datum/data/record/R in data_core.security)
+					for (var/datum/data/record/R in GLOB.datacore.security)
 						if (R.fields["id"] == E.fields["id"])
 							if(hasHUD(usr,"security"))
 								to_chat(usr, "<b>Name:</b> [R.fields["name"]]	<b>Criminal Status:</b> [R.fields["criminal"]]")
@@ -729,14 +735,11 @@
 			if(wear_id)
 				if(istype(wear_id,/obj/item/card/id))
 					perpname = wear_id:registered_name
-				else if(istype(wear_id,/obj/item/device/pda))
-					var/obj/item/device/pda/tempPda = wear_id
-					perpname = tempPda.owner
 			else
 				perpname = src.name
-			for (var/datum/data/record/E in data_core.general)
+			for (var/datum/data/record/E in GLOB.datacore.general)
 				if (E.fields["name"] == perpname)
-					for (var/datum/data/record/R in data_core.security)
+					for (var/datum/data/record/R in GLOB.datacore.security)
 						if (R.fields["id"] == E.fields["id"])
 							if(hasHUD(usr,"security"))
 								read = 1
@@ -757,28 +760,25 @@
 			if(wear_id)
 				if(istype(wear_id,/obj/item/card/id))
 					perpname = wear_id:registered_name
-				else if(istype(wear_id,/obj/item/device/pda))
-					var/obj/item/device/pda/tempPda = wear_id
-					perpname = tempPda.owner
 			else
 				perpname = src.name
-			for (var/datum/data/record/E in data_core.general)
+			for (var/datum/data/record/E in GLOB.datacore.general)
 				if (E.fields["name"] == perpname)
-					for (var/datum/data/record/R in data_core.security)
+					for (var/datum/data/record/R in GLOB.datacore.security)
 						if (R.fields["id"] == E.fields["id"])
 							if(hasHUD(usr,"security"))
 								var/t1 = copytext(sanitize(input("Add Comment:", "Sec. records", null, null)  as message),1,MAX_MESSAGE_LEN)
-								if ( !(t1) || usr.stat || usr.is_mob_restrained() || !(hasHUD(usr,"security")) )
+								if ( !(t1) || usr.stat || usr.restrained() || !(hasHUD(usr,"security")) )
 									return
 								var/counter = 1
 								while(R.fields[text("com_[]", counter)])
 									counter++
 								if(istype(usr,/mob/living/carbon/human))
 									var/mob/living/carbon/human/U = usr
-									R.fields[text("com_[counter]")] = text("Made by [U.get_authentification_name()] ([U.get_assignment()]) on [time2text(world.realtime, "DDD MMM DD hh:mm:ss")], [game_year]<BR>[t1]")
+									R.fields[text("com_[counter]")] = text("Made by [U.get_authentification_name()] ([U.get_assignment()]) on [time2text(world.realtime, "DDD MMM DD hh:mm:ss")], [GAME_YEAR]<BR>[t1]")
 								if(istype(usr,/mob/living/silicon/robot))
 									var/mob/living/silicon/robot/U = usr
-									R.fields[text("com_[counter]")] = text("Made by [U.name] ([U.modtype] [U.braintype]) on [time2text(world.realtime, "DDD MMM DD hh:mm:ss")], [game_year]<BR>[t1]")
+									R.fields[text("com_[counter]")] = text("Made by [U.name] ([U.modtype] [U.braintype]) on [time2text(world.realtime, "DDD MMM DD hh:mm:ss")], [GAME_YEAR]<BR>[t1]")
 
 	if (href_list["medical"])
 		if(hasHUD(usr,"medical"))
@@ -788,15 +788,12 @@
 			if(wear_id)
 				if(istype(wear_id,/obj/item/card/id))
 					perpname = wear_id:registered_name
-				else if(istype(wear_id,/obj/item/device/pda))
-					var/obj/item/device/pda/tempPda = wear_id
-					perpname = tempPda.owner
 			else
 				perpname = src.name
 
-			for (var/datum/data/record/E in data_core.general)
+			for (var/datum/data/record/E in GLOB.datacore.general)
 				if (E.fields["name"] == perpname)
-					for (var/datum/data/record/R in data_core.general)
+					for (var/datum/data/record/R in GLOB.datacore.general)
 						if (R.fields["id"] == E.fields["id"])
 
 							var/setmedical = input(usr, "Specify a new medical status for this person.", "Medical HUD", R.fields["p_stat"]) in list("*SSD*", "*Deceased*", "Physically Unfit", "Active", "Disabled", "Cancel")
@@ -805,8 +802,6 @@
 								if(setmedical != "Cancel")
 									R.fields["p_stat"] = setmedical
 									modified = 1
-									if(PDA_Manifest.len)
-										PDA_Manifest.Cut()
 
 									spawn()
 										if(istype(usr,/mob/living/carbon/human))
@@ -827,14 +822,11 @@
 			if(wear_id)
 				if(istype(wear_id,/obj/item/card/id))
 					perpname = wear_id:registered_name
-				else if(istype(wear_id,/obj/item/device/pda))
-					var/obj/item/device/pda/tempPda = wear_id
-					perpname = tempPda.owner
 			else
 				perpname = src.name
-			for (var/datum/data/record/E in data_core.general)
+			for (var/datum/data/record/E in GLOB.datacore.general)
 				if (E.fields["name"] == perpname)
-					for (var/datum/data/record/R in data_core.medical)
+					for (var/datum/data/record/R in GLOB.datacore.medical)
 						if (R.fields["id"] == E.fields["id"])
 							if(hasHUD(usr,"medical"))
 								to_chat(usr, "<b>Name:</b> [R.fields["name"]]	<b>Blood Type:</b> [R.fields["b_type"]]")
@@ -858,14 +850,11 @@
 			if(wear_id)
 				if(istype(wear_id,/obj/item/card/id))
 					perpname = wear_id:registered_name
-				else if(istype(wear_id,/obj/item/device/pda))
-					var/obj/item/device/pda/tempPda = wear_id
-					perpname = tempPda.owner
 			else
 				perpname = src.name
-			for (var/datum/data/record/E in data_core.general)
+			for (var/datum/data/record/E in GLOB.datacore.general)
 				if (E.fields["name"] == perpname)
-					for (var/datum/data/record/R in data_core.medical)
+					for (var/datum/data/record/R in GLOB.datacore.medical)
 						if (R.fields["id"] == E.fields["id"])
 							if(hasHUD(usr,"medical"))
 								read = 1
@@ -886,40 +875,39 @@
 			if(wear_id)
 				if(istype(wear_id,/obj/item/card/id))
 					perpname = wear_id:registered_name
-				else if(istype(wear_id,/obj/item/device/pda))
-					var/obj/item/device/pda/tempPda = wear_id
-					perpname = tempPda.owner
 			else
 				perpname = src.name
-			for (var/datum/data/record/E in data_core.general)
+			for (var/datum/data/record/E in GLOB.datacore.general)
 				if (E.fields["name"] == perpname)
-					for (var/datum/data/record/R in data_core.medical)
+					for (var/datum/data/record/R in GLOB.datacore.medical)
 						if (R.fields["id"] == E.fields["id"])
 							if(hasHUD(usr,"medical"))
 								var/t1 = copytext(sanitize(input("Add Comment:", "Med. records", null, null)  as message),1,MAX_MESSAGE_LEN)
-								if ( !(t1) || usr.stat || usr.is_mob_restrained() || !(hasHUD(usr,"medical")) )
+								if ( !(t1) || usr.stat || usr.restrained() || !(hasHUD(usr,"medical")) )
 									return
 								var/counter = 1
 								while(R.fields[text("com_[]", counter)])
 									counter++
 								if(istype(usr,/mob/living/carbon/human))
 									var/mob/living/carbon/human/U = usr
-									R.fields[text("com_[counter]")] = text("Made by [U.get_authentification_name()] ([U.get_assignment()]) on [time2text(world.realtime, "DDD MMM DD hh:mm:ss")], [game_year]<BR>[t1]")
+									R.fields[text("com_[counter]")] = text("Made by [U.get_authentification_name()] ([U.get_assignment()]) on [time2text(world.realtime, "DDD MMM DD hh:mm:ss")], [GAME_YEAR]<BR>[t1]")
 								if(istype(usr,/mob/living/silicon/robot))
 									var/mob/living/silicon/robot/U = usr
-									R.fields[text("com_[counter]")] = text("Made by [U.name] ([U.modtype] [U.braintype]) on [time2text(world.realtime, "DDD MMM DD hh:mm:ss")], [game_year]<BR>[t1]")
+									R.fields[text("com_[counter]")] = text("Made by [U.name] ([U.modtype] [U.braintype]) on [time2text(world.realtime, "DDD MMM DD hh:mm:ss")], [GAME_YEAR]<BR>[t1]")
 
 	if (href_list["medholocard"])
-		if(species?.count_human)
+		if(!species?.count_human)
 			to_chat(usr, "<span class='warning'>Triage holocards only works on organic humanoid entities.</span>")
 			return
 		var/newcolor = input("Choose a triage holo card to add to the patient:", "Triage holo card", null, null) in list("black", "red", "orange", "none")
-		if(!newcolor) return
+		if(!newcolor)
+			return
 		if(get_dist(usr, src) > 7)
 			to_chat(usr, "<span class='warning'>[src] is too far away.</span>")
 			return
 		if(newcolor == "none")
-			if(!holo_card_color) return
+			if(!holo_card_color)
+				return
 			holo_card_color = null
 			to_chat(usr, "<span class='notice'>You remove the holo card on [src].</span>")
 		else if(newcolor != holo_card_color)
@@ -936,7 +924,7 @@
 				to_chat(usr, "<span class='warning'>[src] is too far away.</span>")
 				return
 
-			for(var/datum/data/record/R in data_core.medical)
+			for(var/datum/data/record/R in GLOB.datacore.medical)
 				if (R.fields["name"] == real_name)
 					if(R.fields["last_scan_time"] && R.fields["last_scan_result"])
 						usr << browse(R.fields["last_scan_result"], "window=scanresults;size=430x600")
@@ -1005,10 +993,12 @@
 		visible_message("<span class='warning'> [src] begins playing his ribcage like a xylophone. It's quite spooky.</span>","<span class='notice'> You begin to play a spooky refrain on your ribcage.</span>","<span class='warning'> You hear a spooky xylophone melody.</span>")
 		var/song = pick('sound/effects/xylophone1.ogg','sound/effects/xylophone2.ogg','sound/effects/xylophone3.ogg')
 		playsound(loc, song, 25, 1)
-		xylophone = 1
-		spawn(1200)
-			xylophone=0
+		xylophone = TRUE
+		addtimer(CALLBACK(src, .xylophone_cooldown), 1200)
 	return
+
+/mob/living/carbon/human/proc/xylophone_cooldown()
+	xylophone = FALSE
 
 /mob/living/carbon/human/proc/morph()
 	set name = "Morph"
@@ -1094,7 +1084,7 @@
 		src.verbs -= /mob/living/carbon/human/proc/remotesay
 		return
 	var/list/creatures = list()
-	for(var/mob/living/carbon/h in player_list)
+	for(var/mob/living/carbon/h in GLOB.player_list)
 		creatures += h
 	var/mob/target = input ("Who do you want to project your mind to ?") as null|anything in creatures
 	if (isnull(target))
@@ -1107,7 +1097,7 @@
 		target.show_message("<span class='notice'> You hear a voice that seems to echo around the room: [say]</span>")
 	usr.show_message("<span class='notice'> You project your mind into [target.real_name]: [say]</span>")
 	log_directed_talk(usr, target, say, LOG_SAY, "project mind")
-	for(var/mob/dead/observer/G in dead_mob_list)
+	for(var/mob/dead/observer/G in GLOB.dead_mob_list)
 		G.show_message("<i>Telepathic message from <b>[src]</b> to <b>[target]</b>: [say]</i>")
 
 /mob/living/carbon/human/proc/remoteobserve()
@@ -1132,9 +1122,9 @@
 
 	var/list/mob/creatures = list()
 
-	for(var/mob/living/carbon/h in player_list)
+	for(var/mob/living/carbon/h in GLOB.player_list)
 		var/turf/temp_turf = get_turf(h)
-		if((temp_turf.z != 1 && temp_turf.z != 5) || h.stat!=CONSCIOUS) //Not on mining or the station. Or dead
+		if(!is_ground_level(temp_turf.z) || h.stat!=CONSCIOUS) //Not on mining or the station. Or dead
 			continue
 		creatures += h
 
@@ -1161,10 +1151,10 @@
 
 /mob/living/carbon/human/revive(keep_viruses)
 	for (var/datum/limb/O in limbs)
-		if(O.status & LIMB_ROBOT)
-			O.status = LIMB_ROBOT
+		if(O.limb_status & LIMB_ROBOT)
+			O.limb_status = LIMB_ROBOT
 		else
-			O.status = NOFLAGS
+			O.limb_status = NOFLAGS
 		O.perma_injury = 0
 		O.germ_level = 0
 		O.wounds.Cut()
@@ -1175,12 +1165,12 @@
 	h.disfigured = 0
 	name = get_visible_name()
 
-	if(species && !(species.flags & NO_BLOOD))
+	if(species && !(species.species_flags & NO_BLOOD))
 		restore_blood()
 
 	//try to find the brain player in the decapitated head and put them back in control of the human
 	if(!client && !mind) //if another player took control of the human, we don't want to kick them out.
-		for (var/obj/item/limb/head/H in item_list)
+		for (var/obj/item/limb/head/H in GLOB.item_list)
 			if(H.brainmob)
 				if(H.brainmob.real_name == src.real_name)
 					if(H.brainmob.mind)
@@ -1223,7 +1213,7 @@
 /mob/living/carbon/human/proc/handle_embedded_objects()
 
 	for(var/datum/limb/organ in limbs)
-		if(organ.status & LIMB_SPLINTED || organ.status & LIMB_STABILIZED || (m_intent == MOVE_INTENT_WALK && !pulledby) ) //Splints prevent movement. Walking stops shrapnel from harming organs unless being pulled.
+		if(organ.limb_status & LIMB_SPLINTED || organ.limb_status & LIMB_STABILIZED || (m_intent == MOVE_INTENT_WALK && !pulledby) ) //Splints prevent movement. Walking stops shrapnel from harming organs unless being pulled.
 			continue
 		for(var/obj/item/O in organ.implants)
 			if(!istype(O,/obj/item/implant) && prob(4)) //Moving with things stuck in you could be bad.
@@ -1238,9 +1228,9 @@
 						msg ="<span class='warning'>[O] in your [organ.display_name] twists painfully as you move.</span>"
 				to_chat(src, msg)
 
-				organ.take_damage(rand(1,2), 0, 0)
-				if(!(organ.status & LIMB_ROBOT) && !(species.flags & NO_BLOOD)) //There is no blood in protheses.
-					organ.status |= LIMB_BLEEDING
+				organ.take_damage_limb(rand(1, 2))
+				if(!(organ.limb_status & LIMB_ROBOT) && !(species.species_flags & NO_BLOOD)) //There is no blood in protheses.
+					organ.limb_status |= LIMB_BLEEDING
 					if(prob(10)) src.adjustToxLoss(1)
 
 /mob/living/carbon/human/verb/check_pulse()
@@ -1250,16 +1240,16 @@
 	set src in view(1)
 	var/self = 0
 
-	if(usr.stat > 0 || usr.is_mob_restrained() || !isliving(usr)) return
+	if(usr.stat > 0 || usr.restrained() || !isliving(usr)) return
 
 	if(usr == src)
 		self = 1
 	if(!self)
-		usr.visible_message("<span class='notice'> [usr] kneels down, puts \his hand on [src]'s wrist and begins counting their pulse.</span>",\
-		"You begin counting [src]'s pulse", null, 3)
+		usr.visible_message("<span class='notice'>[usr] kneels down, puts [usr.p_their()] hand on [src]'s wrist and begins counting their pulse.</span>",\
+		"<span class='notice'>You begin counting [src]'s pulse...</span>", null, 3)
 	else
-		usr.visible_message("<span class='notice'> [usr] begins counting their pulse.</span>",\
-		"You begin counting your pulse.", null, 3)
+		usr.visible_message("<span class='notice'>[usr] begins counting their pulse.</span>",\
+		"<span class='notice'>You begin counting your pulse...</span>", null, 3)
 
 	if(src.pulse)
 		to_chat(usr, "<span class='notice'>[self ? "You have a" : "[src] has a"] pulse! Counting...</span>")
@@ -1279,11 +1269,12 @@
 	set name = "View Crew Manifest"
 	set category = "IC"
 
-	var/dat
-	dat += "<h4>Crew Manifest</h4>"
-	dat += data_core.get_manifest()
+	var/dat = GLOB.datacore.get_manifest()
 
-	src << browse(dat, "window=manifest;size=370x420;can_close=1")
+	var/datum/browser/popup = new(src, "manifest", "<div align='center'>Crew Manifest</div>", 370, 420)
+	popup.set_content(dat)
+	popup.open(FALSE)
+
 
 /mob/living/carbon/human/species
 	var/race = null
@@ -1318,7 +1309,7 @@
 
 	var/datum/species/oldspecies = species
 
-	species = all_species[new_species]
+	species = GLOB.all_species[new_species]
 
 	if(oldspecies)
 		//additional things to change when we're no longer that species
@@ -1442,8 +1433,6 @@
 		if(C.flags_armor_protection & FEET)
 			feet_exposed = 0
 
-	flavor_text = flavor_texts["general"]
-	flavor_text += "\n\n"
 	for (var/T in flavor_texts)
 		if(flavor_texts[T] && flavor_texts[T] != "")
 			if((T == "head" && head_exposed) || (T == "face" && face_exposed) || (T == "eyes" && eyes_exposed) || (T == "torso" && torso_exposed) || (T == "arms" && arms_exposed) || (T == "hands" && hands_exposed) || (T == "legs" && legs_exposed) || (T == "feet" && feet_exposed))
@@ -1452,12 +1441,12 @@
 	return ..()
 
 /mob/living/carbon/human/getDNA()
-	if(species.flags & NO_SCAN)
+	if(species.species_flags & NO_SCAN)
 		return null
 	..()
 
 /mob/living/carbon/human/setDNA()
-	if(species.flags & NO_SCAN)
+	if(species.species_flags & NO_SCAN)
 		return
 	..()
 
@@ -1469,22 +1458,72 @@
 		return FALSE
 	. = ..()
 
+/mob/living/carbon/human/disable_lights(armor = TRUE, guns = TRUE, flares = TRUE, misc = TRUE, sparks = FALSE, silent = FALSE)
+	if(luminosity <= 0)
+		return FALSE
 
+	if(sparks)
+		var/datum/effect_system/spark_spread/spark_system = new
+		spark_system.set_up(5, 0, src)
+		spark_system.attach(src)
+		spark_system.start(src)
 
-//very similar to xeno's queen_locator() but this is for locating squad leader.
-/mob/living/carbon/human/proc/locate_squad_leader()
-	if(!assigned_squad) return
-	var/mob/living/carbon/human/H = assigned_squad.squad_leader
-	if(!H)
-		hud_used.locate_leader.icon_state = "trackoff"
-		return
-
-	if(H.z != src.z || get_dist(src,H) < 1 || src == H)
-		hud_used.locate_leader.icon_state = "trackondirect"
-	else
-		hud_used.locate_leader.dir = get_dir(src,H)
-		hud_used.locate_leader.icon_state = "trackon"
-
+	var/light_off = 0
+	var/goes_out = 0
+	if(armor)
+		if(istype(wear_suit, /obj/item/clothing/suit/storage/marine))
+			var/obj/item/clothing/suit/storage/marine/S = wear_suit
+			if(S.turn_off_light(src))
+				light_off++
+	if(guns)
+		for(var/obj/item/weapon/gun/G in contents)
+			if(G.turn_off_light(src))
+				light_off++
+	if(flares)
+		for(var/obj/item/flashlight/flare/F in contents)
+			if(F.on)
+				goes_out++
+			F.turn_off(src)
+		for(var/obj/item/explosive/grenade/flare/FL in contents)
+			if(FL.active)
+				goes_out++
+			FL.turn_off(src)
+	if(misc)
+		for(var/obj/item/clothing/head/hardhat/H in contents)
+			if(H.turn_off_light(src))
+				light_off++
+		for(var/obj/item/flashlight/L in contents)
+			if(istype(L, /obj/item/flashlight/flare))
+				continue
+			if(L.turn_off_light(src))
+				light_off++
+		for(var/obj/item/tool/weldingtool/W in contents)
+			if(W.isOn())
+				W.toggle()
+				goes_out++
+		for(var/obj/item/tool/pickaxe/plasmacutter/W in contents)
+			if(W.powered)
+				W.toggle()
+				goes_out++
+		for(var/obj/item/tool/match/M in contents)
+			M.burn_out(src)
+		for(var/obj/item/tool/lighter/Z in contents)
+			if(Z.turn_off(src))
+				goes_out++
+	if(!silent)
+		if(goes_out && light_off)
+			to_chat(src, "<span class='notice'>Your sources of light short and fizzle out.</span>")
+		else if(goes_out)
+			if(goes_out > 1)
+				to_chat(src, "<span class='notice'>Your sources of light fizzle out.</span>")
+			else
+				to_chat(src, "<span class='notice'>Your source of light fizzles out.</span>")
+		else if(light_off)
+			if(light_off > 1)
+				to_chat(src, "<span class='notice'>Your sources of light short out.</span>")
+			else
+				to_chat(src, "<span class='notice'>Your source of light shorts out.</span>")
+		return TRUE
 
 /mob/living/carbon/get_standard_pixel_y_offset()
 	if(lying)
@@ -1540,24 +1579,8 @@
 
 
 
-
-
-/mob/living/carbon/human/update_tint()
-	tinttotal = get_total_tint()
-	if(tinttotal >= 3)
-		blind_eyes(1)
-		return TRUE
-	else if(eye_blind == 1)
-		adjust_blindness(-1)
-	if(tinttotal == 2)
-		overlay_fullscreen("tint", /obj/screen/fullscreen/impaired, 2)
-		return TRUE
-	else
-		clear_fullscreen("tint", 0)
-		return FALSE
-
-/mob/living/carbon/human/proc/get_total_tint()
-	. = 0
+/mob/living/carbon/human/get_total_tint()
+	. = ..()
 	var/obj/item/clothing/C
 	if(istype(head, /obj/item/clothing/head))
 		C = head
@@ -1571,5 +1594,147 @@
 
 
 /mob/living/carbon/human/a_select_zone(input as text, screen_num as null|num)
-	screen_num = 21
+	screen_num = 20
 	return ..()
+
+
+/mob/living/carbon/human/verb/check_skills()
+	set category = "IC"
+	set name = "Check Skills"
+
+	var/dat
+	if(!mind)
+		dat += "You have no mind!"
+	else if(!mind.cm_skills)
+		dat += "You don't have any skills restrictions. Enjoy."
+	else
+		var/datum/skills/S = mind.cm_skills
+		for(var/i = 1 to length(S.values))
+			var/index = S.values[i]
+			var/value = max(S.values[index], 0)
+			dat += "[index]: [value]<br>"
+
+	var/datum/browser/popup = new(src, "skills", "<div align='center'>Skills</div>", 300, 600)
+	popup.set_content(dat)
+	popup.open(FALSE)
+
+
+
+/mob/living/carbon/human/proc/set_rank(rank)
+	if(!rank)
+		return FALSE
+
+	if(!mind)
+		job = rank
+		return FALSE
+
+	var/datum/job/J = SSjob.GetJob(rank)
+	if(!J)
+		return FALSE
+
+	var/datum/outfit/job/O = new J.outfit
+	var/id = O.id ? O.id : /obj/item/card/id
+	var/obj/item/card/id/I = new id
+	var/datum/skills/L = new J.skills_type
+	mind.cm_skills = L
+	mind.comm_title = J.comm_title
+
+	if(wear_id)
+		qdel(wear_id)
+
+	job = rank
+	faction = J.faction
+
+	equip_to_slot_or_del(I, SLOT_WEAR_ID)
+
+	SSjob.AssignRole(src, rank)
+	O.handle_id(src)
+
+	GLOB.datacore.manifest_update(real_name, real_name, job)
+
+	if(assigned_squad)
+		change_squad(assigned_squad.name)
+
+	return TRUE
+
+
+/mob/living/carbon/human/proc/set_equipment(equipment)
+	if(!equipment)
+		return FALSE
+
+	var/list/job_paths = subtypesof(/datum/outfit/job)
+	var/list/outfits = list()
+	for(var/path in job_paths)
+		var/datum/outfit/O = path
+		if(initial(O.can_be_admin_equipped))
+			outfits[initial(O.name)] = path
+
+	for(var/datum/outfit/D in GLOB.custom_outfits)
+		outfits[D.name] = D
+
+	if(!(equipment in outfits))
+		return FALSE
+
+	var/datum/outfit/O = new outfits[equipment]
+	delete_equipment(TRUE)
+	equipOutfit(O, FALSE)
+
+	return TRUE
+
+
+/mob/living/carbon/human/take_over(mob/M)
+	if(assigned_squad)
+		assigned_squad.clean_marine_from_squad(src)
+
+	. = ..()
+
+	set_rank(job)
+
+	if(assigned_squad)
+		change_squad(assigned_squad.name)
+
+
+/mob/living/carbon/human/proc/change_squad(squad)
+	if(!squad || !(job in JOBS_MARINES))
+		return FALSE
+
+	var/datum/squad/S = SSjob.squads[squad]
+
+	if(mind)
+		assigned_squad = null
+	else
+		assigned_squad = S
+		return FALSE
+
+	var/datum/job/J = SSjob.GetJob(mind.assigned_role)
+	var/datum/outfit/job/O = new J.outfit
+	O.handle_id(src)
+
+	S.put_marine_in_squad(src)
+
+	//Crew manifest
+	for(var/i in GLOB.datacore.general)
+		var/datum/data/record/R = i
+		if(R.fields["name"] == real_name)
+			R.fields["squad"] = S.name
+			break
+
+	if(istype(wear_id, /obj/item/card/id))
+		var/obj/item/card/id/ID = wear_id
+		ID.assigned_fireteam = 0
+
+	//Headset frequency.
+	if(istype(wear_ear, /obj/item/radio/headset/almayer/marine))
+		var/obj/item/radio/headset/almayer/marine/E = wear_ear
+		E.set_frequency(S.radio_freq)
+	else
+		if(wear_ear)
+			dropItemToGround(wear_ear)
+		var/obj/item/radio/headset/almayer/marine/E = new
+		equip_to_slot_or_del(E, SLOT_EARS)
+		E.set_frequency(S.radio_freq)
+		update_icons()
+
+	hud_set_squad()
+
+	return TRUE

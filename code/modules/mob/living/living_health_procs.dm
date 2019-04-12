@@ -79,6 +79,15 @@
 mob/living/proc/adjustHalLoss(amount) //This only makes sense for carbon.
 	return
 
+/mob/living/proc/Losebreath(amount, forced = FALSE)
+	return
+
+/mob/living/proc/adjust_Losebreath(amount, forced = FALSE)
+	return
+
+/mob/living/proc/set_Losebreath(amount, forced = FALSE)
+	return
+
 
 
 
@@ -133,6 +142,20 @@ mob/living/proc/adjustHalLoss(amount) //This only makes sense for carbon.
 /mob/living/proc/revive(keep_viruses)
 	rejuvenate()
 
+/mob/living/proc/on_revive()
+	GLOB.alive_mob_list += src
+	GLOB.dead_mob_list -= src
+
+/mob/living/carbon/human/on_revive()
+	. = ..()
+	GLOB.alive_human_list += src
+	GLOB.dead_human_list -= src
+
+/mob/living/carbon/Xenomorph/on_revive()
+	. = ..()
+	GLOB.alive_xeno_list += src
+	GLOB.dead_xeno_list -= src
+
 /mob/living/proc/rejuvenate()
 
 	// shut down various types of badness
@@ -164,8 +187,7 @@ mob/living/proc/adjustHalLoss(amount) //This only makes sense for carbon.
 
 	// remove the character from the list of the dead
 	if(stat == DEAD)
-		dead_mob_list -= src
-		living_mob_list += src
+		on_revive()
 		tod = null
 		timeofdeath = 0
 
@@ -198,4 +220,5 @@ mob/living/proc/adjustHalLoss(amount) //This only makes sense for carbon.
 	plasma_stored = xeno_caste.plasma_max
 	stagger = 0
 	slowdown = 0
+	hive?.on_xeno_revive(src)
 	return ..()

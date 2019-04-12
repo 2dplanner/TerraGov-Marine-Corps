@@ -29,8 +29,8 @@
 		hide(T.intact_tile)
 
 		spawn(5)	// must wait for map loading to finish
-			if(radio_controller)
-				radio_controller.add_object(src, freq, RADIO_NAVBEACONS)
+			if(SSradio)
+				SSradio.add_object(src, freq, RADIO_NAVBEACONS)
 
 	// set the transponder codes assoc list from codes_txt
 	proc/set_codes()
@@ -54,7 +54,7 @@
 	// called when turf state changes
 	// hide the object if turf is intact
 	hide(var/intact)
-		invisibility = intact ? 101 : 0
+		invisibility = intact ? INVISIBILITY_MAXIMUM : 0
 		updateicon()
 
 	// update the icon_state
@@ -84,7 +84,7 @@
 
 	proc/post_signal()
 
-		var/datum/radio_frequency/frequency = radio_controller.return_frequency(freq)
+		var/datum/radio_frequency/frequency = SSradio.return_frequency(freq)
 
 		if(!frequency) return
 
@@ -104,14 +104,14 @@
 		if(T.intact_tile)
 			return		// prevent intraction when T-scanner revealed
 
-		if(istype(I, /obj/item/tool/screwdriver))
+		if(isscrewdriver(I))
 			open = !open
 
 			user.visible_message("[user] [open ? "opens" : "closes"] the beacon's cover.", "You [open ? "open" : "close"] the beacon's cover.")
 
 			updateicon()
 
-		else if (istype(I, /obj/item/card/id)||istype(I, /obj/item/device/pda))
+		else if (istype(I, /obj/item/card/id))
 			if(open)
 				if (src.allowed(user))
 					src.locked = !src.locked
@@ -184,7 +184,7 @@ Transponder Codes:<UL>"}
 		..()
 		if (usr.stat)
 			return
-		if ((in_range(src, usr) && istype(src.loc, /turf)) || (istype(usr, /mob/living/silicon)))
+		if ((in_range(src, usr) && istype(src.loc, /turf)) || (issilicon(usr)))
 			if(open && !locked)
 				usr.set_interaction(src)
 

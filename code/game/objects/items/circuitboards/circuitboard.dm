@@ -11,7 +11,7 @@
 	var/is_general_board = FALSE
 
 /obj/item/circuitboard/attackby(obj/item/W , mob/user)
-	if(istype(W, /obj/item/device/multitool) && is_general_board == TRUE)
+	if(ismultitool(W) && is_general_board == TRUE)
 		var/list/modes_to_pick = list("APC", "Airlock", "Fire Alarm", "Air Alarm", "None")
 		var/obj/item/circuitboard/new_board
 		var/modepick = input("Select a mode for this circuit.") as null|anything in modes_to_pick
@@ -36,8 +36,8 @@
 
 /obj/item/circuitboard/proc/set_general()
 	is_general_board = TRUE
-	name = "[initial.(name)] (General)"
-	desc = "[initial.(desc)] This appears to be a modular general circuit that can switch between pre-programmed modes with a multitool."
+	name = "[initial(name)] (General)"
+	desc = "[initial(desc)] This appears to be a modular general circuit that can switch between pre-programmed modes with a multitool."
 
 //Called when the circuitboard is used to contruct a new machine.
 /obj/item/circuitboard/proc/construct(var/obj/machinery/M)
@@ -80,7 +80,7 @@
 
 /obj/item/circuitboard/apc/attackby(obj/item/W , mob/user)
 	. = ..()
-	if (istype(W, /obj/item/device/multitool))
+	if (ismultitool(W))
 		var/obj/item/circuitboard/machine/ghettosmes/newcircuit = new(user.loc)
 		user.put_in_hands(newcircuit)
 		qdel(src)
@@ -150,7 +150,7 @@
 
 /obj/item/circuitboard/airlock/Topic(href, href_list)
 	. = ..()
-	if (usr.stat || usr.is_mob_restrained() || (!ishuman(usr) && !issilicon(usr)))
+	if (usr.stat || usr.restrained() || (!ishuman(usr) && !issilicon(usr)))
 		return
 	if (href_list["close"])
 		usr << browse(null, "window=airlock")
@@ -162,9 +162,6 @@
 			src.last_configurator = usr.name
 		else
 			var/obj/item/I = usr.get_active_held_item()
-			if (istype(I, /obj/item/device/pda))
-				var/obj/item/device/pda/pda = I
-				I = pda.id
 			if (I && src.check_access(I))
 				src.locked = 0
 				src.last_configurator = I:registered_name

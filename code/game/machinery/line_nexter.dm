@@ -21,7 +21,7 @@
 	if(iscarbon(O))
 		var/mob/living/carbon/C = O
 		if(C.pulledby)
-			if(!C.is_mob_incapacitated() && target == locate(x-1,y,z))
+			if(!C.incapacitated() && target == locate(x-1,y,z))
 				return 0
 	return 1
 
@@ -51,7 +51,7 @@
 	icon_state = "doorctrl1"
 	add_fingerprint(user)
 
-	for(var/obj/machinery/line_nexter/L in machines)
+	for(var/obj/machinery/line_nexter/L in GLOB.machines)
 		if(id == L.id)
 			L.next()
 

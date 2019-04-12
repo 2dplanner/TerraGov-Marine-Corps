@@ -6,11 +6,11 @@
 	minbodytemp = 0
 	maxbodytemp = 500
 
-	var/obj/item/device/radio/borg/radio = null
+	var/obj/item/radio/borg/radio = null
 	var/mob/living/silicon/ai/connected_ai = null
 	var/obj/item/cell/cell = null
 	var/obj/machinery/camera/camera = null
-	var/obj/item/device/mmi/mmi = null
+	var/obj/item/mmi/mmi = null
 	var/list/req_access = list(ACCESS_MARINE_RESEARCH) //Access needed to pop out the brain.
 
 	name = "Spider-bot"
@@ -44,8 +44,8 @@
 
 /mob/living/simple_animal/spiderbot/attackby(var/obj/item/O as obj, var/mob/user as mob)
 
-	if(istype(O, /obj/item/device/mmi))
-		var/obj/item/device/mmi/B = O
+	if(istype(O, /obj/item/mmi))
+		var/obj/item/mmi/B = O
 		if(src.mmi) //There's already a brain in it.
 			to_chat(user, "<span class='warning'>There's already a brain in [src]!</span>")
 			return
@@ -55,7 +55,7 @@
 		if(!B.brainmob.key)
 			var/ghost_can_reenter = 0
 			if(B.brainmob.mind)
-				for(var/mob/dead/observer/G in player_list)
+				for(var/mob/dead/observer/G in GLOB.player_list)
 					if(G.can_reenter_corpse && G.mind == B.brainmob.mind)
 						ghost_can_reenter = 1
 						break
@@ -67,10 +67,6 @@
 			to_chat(user, "<span class='warning'>[O] is dead. Sticking it into the frame would sort of defeat the purpose.</span>")
 			return
 
-		if(jobban_isbanned(B.brainmob, "Cyborg"))
-			to_chat(user, "<span class='warning'>[O] does not seem to fit.</span>")
-			return
-
 
 
 		user.transferItemToLoc(O, src)
@@ -80,7 +76,7 @@
 		update_icon()
 		return 1
 
-	if (istype(O, /obj/item/tool/weldingtool))
+	if (iswelder(O))
 		var/obj/item/tool/weldingtool/WT = O
 		if (WT.remove_fuel(0))
 			if(health < maxHealth)
@@ -95,7 +91,7 @@
 		else
 			to_chat(user, "Need more welding fuel!")
 			return
-	else if(istype(O, /obj/item/card/id)||istype(O, /obj/item/device/pda))
+	else if(istype(O, /obj/item/card/id))
 		if (!mmi)
 			to_chat(user, "<span class='warning'>There's no reason to swipe your ID - the spiderbot has no brain to remove.</span>")
 			return 0
@@ -104,9 +100,6 @@
 
 		if(istype(O, /obj/item/card/id))
 			id_card = O
-		else
-			var/obj/item/device/pda/pda = O
-			id_card = pda.id
 
 		if(ACCESS_MARINE_RESEARCH in id_card.access)
 			to_chat(user, "<span class='notice'>You swipe your access card and pop the brain out of [src].</span>")
@@ -148,7 +141,7 @@
 				if ((M.client && !is_blind(M)))
 					M.show_message("<span class='warning'> [user] gently taps [src] with the [O]. </span>")
 
-/mob/living/simple_animal/spiderbot/proc/transfer_personality(var/obj/item/device/mmi/M as obj)
+/mob/living/simple_animal/spiderbot/proc/transfer_personality(var/obj/item/mmi/M as obj)
 
 		src.mind = M.brainmob.mind
 		src.mind.key = M.brainmob.key
@@ -164,9 +157,9 @@
 	eject_brain()
 	death()
 
-/mob/living/simple_animal/spiderbot/proc/update_icon()
+/mob/living/simple_animal/spiderbot/update_icon()
 	if(mmi)
-		if(istype(mmi,/obj/item/device/mmi))
+		if(istype(mmi,/obj/item/mmi))
 			icon_state = "spiderbot-chassis-mmi"
 			icon_living = "spiderbot-chassis-mmi"
 	else
@@ -189,7 +182,7 @@
 
 /mob/living/simple_animal/spiderbot/Initialize()
 
-	radio = new /obj/item/device/radio/borg(src)
+	radio = new /obj/item/radio/borg(src)
 	camera = new /obj/machinery/camera(src)
 	camera.c_tag = "Spiderbot-[real_name]"
 	camera.network = list("SS13")
@@ -198,8 +191,8 @@
 
 /mob/living/simple_animal/spiderbot/death()
 
-	living_mob_list -= src
-	dead_mob_list += src
+	GLOB.alive_mob_list -= src
+	GLOB.dead_mob_list += src
 
 	if(camera)
 		camera.status = 0
@@ -273,4 +266,4 @@
 /mob/living/simple_animal/spiderbot/examine(mob/user)
 	..()
 	if(held_item)
-		to_chat(user, "It is carrying \a [held_item] \icon[held_item].")
+		to_chat(user, "It is carrying \a [held_item] [icon2html(held_item, user)].")

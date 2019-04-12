@@ -34,7 +34,7 @@
 /obj/structure/mineral_door/attack_ai(mob/user as mob) //those aren't machinery, they're just big fucking slabs of a mineral
 	if(isAI(user)) //so the AI can't open it
 		return
-	else if(isrobot(user)) //but cyborgs can
+	else if(iscyborg(user)) //but cyborgs can
 		if(get_dist(user,src) <= 1) //not remotely though
 			return TryToSwitchState(user)
 
@@ -103,6 +103,7 @@
 /obj/structure/mineral_door/attackby(obj/item/W, mob/living/user)
 	var/is_resin = istype(src, /obj/structure/mineral_door/resin)
 	if(!(W.flags_item & NOBLUDGEON) && W.force)
+		user.changeNext_move(W.attack_speed)
 		var/multiplier = 1
 		var/obj/item/tool/pickaxe/plasmacutter/P
 		if(istype(W, /obj/item/tool/pickaxe/plasmacutter) && !user.action_busy)

@@ -67,6 +67,11 @@
 		if(armor < 1)
 			apply_damage(throw_damage, dtype, null, armor, is_sharp(O), has_edge(O), O)
 
+		if(O.item_fire_stacks)
+			fire_stacks += O.item_fire_stacks
+		if(CHECK_BITFIELD(O.resistance_flags, ON_FIRE))
+			IgniteMob()
+
 		O.throwing = 0		//it hit, so stop moving
 
 		if(ismob(O.thrower))
@@ -74,8 +79,8 @@
 			var/client/assailant = M.client
 			if(assailant)
 				log_combat(M, src, "hit", O, "(thrown)")
-				if(!istype(src,/mob/living/simple_animal/mouse))
-					msg_admin_attack("[key_name(usr)] (<A HREF='?_src_=holder;adminmoreinfo=\ref[usr]'>?</A>) (<A HREF='?_src_=holder;adminplayerobservecoodjump=1;X=[usr.x];Y=[usr.y];Z=[usr.z]'>JMP</a>) (<A HREF='?_src_=holder;adminplayerfollow=\ref[usr]'>FLW</a>) was hit by a [O], thrown by [key_name(M)] (<A HREF='?_src_=holder;adminmoreinfo=\ref[M]'>?</A>) (<A HREF='?_src_=holder;adminplayerobservecoodjump=1;X=[M.x];Y=[M.y];Z=[M.z]'>JMP</a>) (<A HREF='?_src_=holder;adminplayerfollow=\ref[M]'>FLW</a>)")
+				if(!istype(src, /mob/living/simple_animal/mouse))
+					msg_admin_attack("[ADMIN_TPMONTY(usr)] was hit by a [O], thrown by [ADMIN_TPMONTY(M)].")
 
 		// Begin BS12 momentum-transfer code.
 		if(O.throw_source && speed >= 15)
@@ -126,13 +131,17 @@
 /mob/living/carbon/human/IgniteMob()
 	. = ..()
 	if(.)
-		if(!stat && !(species.flags & NO_PAIN))
+		if(!stat && !(species.species_flags & NO_PAIN))
 			emote("scream")
 
 /mob/living/carbon/Xenomorph/IgniteMob()
 	. = ..()
 	if(.)
-		SetLuminosity(min(fire_stacks,5)) // light up xenos
+		var/fire_light = min(fire_stacks,5)
+		if(fire_light > fire_luminosity) // light up xenos if new light source greater than
+			SetLuminosity(-fire_luminosity) //Remove old fire_luminosity
+			fire_luminosity = fire_light
+			SetLuminosity(fire_luminosity) //Add new fire luminosity
 		var/obj/item/clothing/mask/facehugger/F = get_active_held_item()
 		var/obj/item/clothing/mask/facehugger/G = get_inactive_held_item()
 		if(istype(F))
@@ -150,11 +159,7 @@
 
 /mob/living/carbon/Xenomorph/ExtinguishMob()
 	. = ..()
-	SetLuminosity(0)
-
-/mob/living/carbon/Xenomorph/Boiler/ExtinguishMob()
-	. = ..()
-	SetLuminosity(3)
+	SetLuminosity(-fire_luminosity) //Reset lighting
 
 /mob/living/proc/update_fire()
 	return

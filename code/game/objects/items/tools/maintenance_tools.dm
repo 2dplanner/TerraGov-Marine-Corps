@@ -1,7 +1,7 @@
 //This file was auto-corrected by findeclaration.exe on 25.5.2012 20:42:32
 
 /* Tools!
- * Note: Multitools are /obj/item/device
+ * Note: Multitools are /obj/item
  *
  * Contains:
  * 		Wrench
@@ -47,12 +47,12 @@
 	matter = list("metal" = 75)
 	attack_verb = list("stabbed")
 
-	suicide_act(mob/user)
-		user.visible_message(pick("<span class='danger'>[user] is stabbing the [src.name] into \his temple! It looks like \he's trying to commit suicide.</span>", \
-							"<span class='danger'>[user] is stabbing the [src.name] into \his heart! It looks like \he's trying to commit suicide.</span>"))
-		return(BRUTELOSS)
+/obj/item/tool/screwdriver/suicide_act(mob/user)
+	user.visible_message("<span class='danger'>[user] is stabbing the [name] into [user.p_their()] [pick("temple","heart")]! It looks like [user.p_theyre()] trying to commit suicide.</span>")
+	return(BRUTELOSS)
 
-/obj/item/tool/screwdriver/New()
+/obj/item/tool/screwdriver/Initialize()
+	. = ..()
 	switch(pick("red","blue","purple","brown","green","cyan","yellow"))
 		if ("red")
 			icon_state = "screwdriver2"
@@ -108,7 +108,8 @@
 	sharp = IS_SHARP_ITEM_SIMPLE
 	edge = 1
 
-/obj/item/tool/wirecutters/New()
+/obj/item/tool/wirecutters/Initialize()
+	. = ..()
 	if(prob(50))
 		icon_state = "cutters-y"
 		item_state = "cutters_yellow"
@@ -153,7 +154,8 @@
 	var/weld_tick = 0	//Used to slowly deplete the fuel when the tool is left on.
 	var/status = TRUE //When welder is secured on unsecured
 
-/obj/item/tool/weldingtool/New()
+/obj/item/tool/weldingtool/Initialize()
+	. = ..()
 //	var/random_fuel = min(rand(10,20),max_fuel)
 	create_reagents(max_fuel)
 	reagents.add_reagent("fuel", max_fuel)
@@ -163,7 +165,7 @@
 /obj/item/tool/weldingtool/Destroy()
 	if(welding)
 		if(ismob(loc))
-			loc.SetLuminosity(-2)
+			loc.SetLuminosity(-LIGHTER_LUMINOSITY)
 		else
 			SetLuminosity(0)
 		STOP_PROCESSING(SSobj, src)
@@ -199,10 +201,10 @@
 		var/datum/limb/S = H.get_limb(user.zone_selected)
 
 		if (!S) return
-		if(!(S.status & LIMB_ROBOT) || user.a_intent != "help")
+		if(!(S.limb_status & LIMB_ROBOT) || user.a_intent != INTENT_HELP)
 			return ..()
 
-		if(isSynth(H))
+		if(issynth(H))
 			if(M == user)
 				to_chat(user, "<span class='warning'>You can't repair damage to your own body - it's against OH&S.</span>")
 				return
@@ -284,9 +286,9 @@
 			welding = 1
 			if(M)
 				to_chat(M, "<span class='notice'>You switch [src] on.</span>")
-				M.SetLuminosity(2)
+				M.SetLuminosity(LIGHTER_LUMINOSITY)
 			else
-				SetLuminosity(2)
+				SetLuminosity(LIGHTER_LUMINOSITY)
 			weld_tick += 8 //turning the tool on does not consume fuel directly, but it advances the process that regularly consumes fuel.
 			force = 15
 			damtype = "fire"
@@ -311,13 +313,12 @@
 				to_chat(M, "<span class='notice'>You switch [src] off.</span>")
 			else
 				to_chat(M, "<span class='warning'>[src] shuts off!</span>")
-			M.SetLuminosity(-2)
+			M.SetLuminosity(-LIGHTER_LUMINOSITY)
 			if(M.r_hand == src)
 				M.update_inv_r_hand()
 			if(M.l_hand == src)
 				M.update_inv_l_hand()
-		else
-			SetLuminosity(0)
+		SetLuminosity(0)
 		STOP_PROCESSING(SSobj, src)
 
 /obj/item/tool/weldingtool/proc/flamethrower_screwdriver(obj/item/I, mob/user)
@@ -335,13 +336,13 @@
 /obj/item/tool/weldingtool/pickup(mob/user)
 	if(welding && loc != user)
 		SetLuminosity(0)
-		user.SetLuminosity(2)
+		user.SetLuminosity(LIGHTER_LUMINOSITY)
 
 
 /obj/item/tool/weldingtool/dropped(mob/user)
 	if(welding && loc != user)
-		user.SetLuminosity(-2)
-		SetLuminosity(2)
+		user.SetLuminosity(-LIGHTER_LUMINOSITY)
+		SetLuminosity(LIGHTER_LUMINOSITY)
 	return ..()
 
 
@@ -423,12 +424,13 @@
 	R.add_reagent("fuel", max_fuel)
 
 /obj/item/tool/weldpack/attackby(obj/item/W as obj, mob/user as mob)
-	if(istype(W, /obj/item/tool/weldingtool))
+	if(iswelder(W))
 		var/obj/item/tool/weldingtool/T = W
 		if(T.welding & prob(50))
-			message_admins("[key_name_admin(user)] triggered a fueltank explosion.")
-			log_game("[key_name(user)] triggered a fueltank explosion.")
+			message_admins("[ADMIN_TPMONTY(user)] triggered a weldpack explosion at [ADMIN_VERBOSEJMP(src.loc)].")
+			log_game("[key_name(user)] triggered a weldpack explosion at [AREACOORD(src.loc)].")
 			to_chat(user, "<span class='warning'>That was stupid of you.</span>")
+			log_explosion("[key_name(user)] triggered a weldpack explosion at [AREACOORD(user.loc)].")
 			explosion(get_turf(src),-1,0,2)
 			if(src)
 				qdel(src)

@@ -1,4 +1,4 @@
-/obj/item/device/assembly/timer
+/obj/item/assembly/timer
 	name = "timer"
 	desc = "Used to time things. Works well with contraptions which has to count down. Tick tock."
 	icon_state = "timer"
@@ -40,7 +40,7 @@
 		if(!secured)	return 0
 		pulse(0)
 		if(!holder)
-			visible_message("\icon[src] *beep* *beep*", "*beep* *beep*")
+			visible_message("[icon2html(src, viewers(src))] *beep* *beep*", "*beep* *beep*")
 		cooldown = 2
 		spawn(10)
 			process_cooldown()
@@ -84,7 +84,7 @@
 
 	Topic(href, href_list)
 		..()
-		if(!usr.canmove || usr.stat || usr.is_mob_restrained() || !in_range(loc, usr))
+		if(!usr.canmove || usr.stat || usr.restrained() || !in_range(loc, usr))
 			usr << browse(null, "window=timer")
 			onclose(usr, "timer")
 			return

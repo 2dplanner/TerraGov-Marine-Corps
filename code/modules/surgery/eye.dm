@@ -9,7 +9,7 @@
 	var/eye_step
 
 /datum/surgery_step/eye/can_use(mob/living/user, mob/living/carbon/human/target, target_zone, obj/item/tool, datum/limb/affected, checks_only)
-	if(!affected || (affected.status & DESTROYED))
+	if(!affected || (affected.limb_status & LIMB_DESTROYED))
 		return 0
 
 	if(target_zone != "eyes")
@@ -87,7 +87,7 @@
 	allowed_tools = list(
 	/obj/item/tool/surgery/hemostat = 100,         \
 	/obj/item/stack/cable_coil = 75,         \
-	/obj/item/device/assembly/mousetrap = 10 //I don't know. Don't ask me. But I'm leaving it because hilarity.
+	/obj/item/assembly/mousetrap = 10 //I don't know. Don't ask me. But I'm leaving it because hilarity.
 	)
 
 	min_duration = EYE_MEND_MIN_DURATION
@@ -121,7 +121,7 @@
 	/obj/item/tool/lighter = 50,    \
 	/obj/item/tool/weldingtool = 25
 	)
-	
+
 	min_duration = EYE_CAUTERISE_MIN_DURATION
 	max_duration = EYE_CAUTERISE_MAX_DURATION
 	eye_step = 3

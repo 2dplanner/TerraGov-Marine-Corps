@@ -118,7 +118,7 @@ won't update every console in existence) but it's more of a hassle to do. Also, 
 
 //Have it automatically push research to the centcomm server so wild griffins can't fuck up R&D's work --NEO
 /obj/machinery/computer/rdconsole/proc/griefProtection()
-	for(var/obj/machinery/r_n_d/server/centcom/C in machines)
+	for(var/obj/machinery/r_n_d/server/centcom/C in GLOB.machines)
 		for(var/datum/tech/T in files.known_tech)
 			C.files.AddTech2Known(T)
 		for(var/datum/design/D in files.known_designs)
@@ -303,7 +303,7 @@ won't update every console in existence) but it's more of a hassle to do. Also, 
 			griefProtection() //Putting this here because I dont trust the sync process
 			spawn(30)
 				if(src)
-					for(var/obj/machinery/r_n_d/server/S in machines)
+					for(var/obj/machinery/r_n_d/server/S in GLOB.machines)
 						var/server_processed = 0
 						if(S.disabled)
 							continue
@@ -344,7 +344,6 @@ won't update every console in existence) but it's more of a hassle to do. Also, 
 				screen = 0.3
 				linked_lathe.busy = 1
 				flick("protolathe_n",linked_lathe)
-				var/key = usr.key	//so we don't lose the info during the spawn delay
 				spawn(16)
 					use_power(power)
 					spawn(16)
@@ -370,8 +369,6 @@ won't update every console in existence) but it's more of a hassle to do. Also, 
 
 						if(being_built.build_path)
 							var/obj/new_item = new being_built.build_path(src)
-							if( new_item.type == /obj/item/storage/backpack/holding )
-								new_item.investigate_log("built by [key]","singulo")
 							new_item.reliability = being_built.reliability
 							if(linked_lathe.hacked) being_built.reliability = max((reliability / 2), 0)
 							/*if(being_built.locked)
@@ -528,7 +525,7 @@ won't update every console in existence) but it's more of a hassle to do. Also, 
 	return
 
 /obj/machinery/computer/rdconsole/attack_hand(mob/user as mob)
-	if(stat & (BROKEN|NOPOWER))
+	if(machine_stat & (BROKEN|NOPOWER))
 		return
 
 	user.set_interaction(src)
@@ -879,7 +876,9 @@ won't update every console in existence) but it's more of a hassle to do. Also, 
 			if(linked_imprinter.uranium_amount >= 10000) dat += "<A href='?src=\ref[src];imprinter_ejectsheet=uranium;imprinter_ejectsheet_amt=5'>(5 Sheets)</A> "
 			if(linked_imprinter.uranium_amount >= 2000) dat += "<A href='?src=\ref[src];imprinter_ejectsheet=uranium;imprinter_ejectsheet_amt=50'>(Max Sheets)</A>"
 
-	user << browse("<TITLE>Research and Development Console</TITLE><HR>[dat]", "window=rdconsole;size=575x400")
+	var/datum/browser/popup = new(user, "rdconsole", "<div align='center'>Research and Development Console</div>", 575, 400)
+	popup.set_content(dat)
+	popup.open(FALSE)
 	onclose(user, "rdconsole")
 
 /obj/machinery/computer/rdconsole/robotics

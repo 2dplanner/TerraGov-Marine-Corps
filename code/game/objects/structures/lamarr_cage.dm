@@ -5,10 +5,16 @@
 	desc = "A glass lab container for storing interesting creatures."
 	density = 1
 	anchored = 1
-	unacidable = 1//Dissolving the case would also delete Lamarr
-	var/health = 30
+	resistance_flags = UNACIDABLE
+	health = 30
 	var/occupied = 1
 	var/destroyed = 0
+
+/obj/structure/lamarr/destroyed
+	icon_state = "labcageb0"
+	density = FALSE
+	destroyed = TRUE
+	occupied = FALSE
 
 /obj/structure/lamarr/ex_act(severity)
 	switch(severity)

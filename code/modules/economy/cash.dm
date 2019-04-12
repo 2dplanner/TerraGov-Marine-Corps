@@ -13,7 +13,7 @@
 	throw_range = 2
 	w_class = 1
 	var/access = list()
-	access = ACCESS_MARINE_COMMANDER
+	access = ACCESS_MARINE_CAPTAIN
 	var/worth = 0
 
 /obj/item/spacecash/attackby(obj/item/W as obj, mob/user as mob)
@@ -31,7 +31,7 @@
 			bundle = W
 		bundle.worth += src.worth
 		bundle.update_icon()
-		if(istype(user, /mob/living/carbon/human))
+		if(ishuman(user))
 			var/mob/living/carbon/human/h_user = user
 			h_user.temporarilyRemoveItemFromInventory(src)
 			h_user.temporarilyRemoveItemFromInventory(bundle)

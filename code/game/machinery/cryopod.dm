@@ -18,8 +18,7 @@ var/global/list/frozen_items = list("Alpha"=list(),"Bravo"=list(),"Charlie"=list
 	icon = 'icons/obj/machines/computer.dmi'
 	icon_state = "cellconsole"
 	circuit = "/obj/item/circuitboard/computer/cryopodcontrol"
-	exproof = TRUE
-	unacidable = TRUE
+	resistance_flags = UNACIDABLE|INDESTRUCTIBLE
 	var/cryotype = "REQ"
 	var/mode = null
 
@@ -51,7 +50,7 @@ var/global/list/frozen_items = list("Alpha"=list(),"Bravo"=list(),"Charlie"=list
 	src.attack_hand()
 
 /obj/machinery/computer/cryopod/attack_hand(mob/user = usr)
-	if(stat & (NOPOWER|BROKEN))
+	if(machine_stat & (NOPOWER|BROKEN))
 		return
 
 	user.set_interaction(src)
@@ -59,7 +58,7 @@ var/global/list/frozen_items = list("Alpha"=list(),"Bravo"=list(),"Charlie"=list
 
 	var/dat
 
-	if(!(ticker))
+	if(!(SSticker))
 		return
 
 	dat += "<hr/><br/><b>Cryogenic Oversight Control for [cryotype]</b><br/>"
@@ -69,8 +68,11 @@ var/global/list/frozen_items = list("Alpha"=list(),"Bravo"=list(),"Charlie"=list
 	dat += "<a href='?src=\ref[src];item=1'>Recover object</a>.<br>"
 	dat += "<a href='?src=\ref[src];allitems=1'>Recover all objects</a>.<br>"
 
-	user << browse(dat, "window=cryopod_console")
+	var/datum/browser/popup = new(user, "cryopod_console", "<div align='center'>Cryogenics</div>")
+	popup.set_content(dat)
+	popup.open(FALSE)
 	onclose(user, "cryopod_console")
+
 
 /obj/machinery/computer/cryopod/Topic(href, href_list)
 
@@ -171,7 +173,7 @@ var/global/list/frozen_items = list("Alpha"=list(),"Bravo"=list(),"Charlie"=list
 	var/orient_right = null // Flips the sprite.
 	var/time_till_despawn = 6000 //10 minutes-ish safe period before being despawned.
 	var/time_entered = 0 //Used to keep track of the safe period.
-	var/obj/item/device/radio/intercom/announce //Intercom for cryo announcements
+	var/obj/item/radio/intercom/announce //Intercom for cryo announcements
 
 /obj/machinery/cryopod/right
 	orient_right = 1
@@ -179,7 +181,7 @@ var/global/list/frozen_items = list("Alpha"=list(),"Bravo"=list(),"Charlie"=list
 
 /obj/machinery/cryopod/New()
 
-	announce = new /obj/item/device/radio/intercom(src)
+	announce = new /obj/item/radio/intercom(src)
 
 	if(orient_right)
 		icon_state = "body_scanner_0-r"
@@ -194,7 +196,7 @@ var/global/list/frozen_items = list("Alpha"=list(),"Bravo"=list(),"Charlie"=list
 		if(world.time - time_entered < time_till_despawn)
 			return
 
-		if(!occupant.client && occupant.stat < DEAD) //Occupant is living and has no client.
+		if(occupant.stat != DEAD) //Occupant is living and has no client.
 
 			//Drop all items into the pod.
 			for(var/obj/item/W in occupant)
@@ -210,35 +212,34 @@ var/global/list/frozen_items = list("Alpha"=list(),"Bravo"=list(),"Charlie"=list
 			if(ishuman(occupant))
 				var/mob/living/carbon/human/H = occupant
 				switch(H.job)
-					if("Military Police","Chief MP")
+					if("Master at Arms","Command Master at Arms")
 						dept_console = frozen_items["MP"]
-					if("Doctor","Researcher","Chief Medical Officer")
+					if("Medical Officer","Medical Researcher","Chief Medical Officer")
 						dept_console = frozen_items["Med"]
-					if("Maintenance Tech","Chief Engineer")
+					if("Ship Engineer","Chief Ship Engineer")
 						dept_console = frozen_items["Eng"]
 
 			var/list/deleteempty = list(/obj/item/storage/backpack/marine/satchel)
 
 			var/list/deleteall = list(/obj/item/clothing/mask/cigarette, \
 			/obj/item/clothing/glasses/sunglasses, \
-			/obj/item/device/pda, \
 			/obj/item/clothing/glasses/mgoggles, \
-			/obj/item/clothing/head/cmberet/red, \
+			/obj/item/clothing/head/tgmcberet/red, \
 			/obj/item/clothing/gloves/black, \
 			/obj/item/weapon/baton, \
 			/obj/item/weapon/gun/energy/taser, \
 			/obj/item/clothing/glasses/sunglasses/sechud, \
-			/obj/item/device/radio/headset/almayer, \
+			/obj/item/radio/headset/almayer, \
 			/obj/item/card/id, \
 			/obj/item/clothing/under/marine, \
 			/obj/item/clothing/shoes/marine, \
-			/obj/item/clothing/head/cmcap)
+			/obj/item/clothing/head/tgmccap)
 
 			var/list/strippeditems = list()
 
 			item_loop:
 				for(var/obj/item/W in items)
-					if((W.flags_inventory & CANTSTRIP) || (W.flags_item & NODROP)) //We don't keep undroppable/unremovable items
+					if(W.flags_item & NODROP) //We don't keep undroppable/unremovable items
 						if(istype(W, /obj/item/clothing/suit/storage))
 							var/obj/item/clothing/suit/storage/SS = W
 							for(var/obj/item/I in SS.pockets) //But we keep stuff inside them
@@ -308,26 +309,6 @@ var/global/list/frozen_items = list("Alpha"=list(),"Bravo"=list(),"Charlie"=list
 					dept_console += A
 					A.loc = null
 
-
-			//Update any existing objectives involving this mob.
-			for(var/datum/objective/O in all_objectives)
-				//We don't want revs to get objectives that aren't for heads of staff. Letting
-				//them win or lose based on cryo is silly so we remove the objective.
-				if(istype(O, /datum/objective/mutiny) && O.target == occupant.mind)
-					qdel(O)
-				else if(O.target && istype(O.target,/datum/mind))
-					if(O.target == occupant.mind)
-						if(O.owner && O.owner.current)
-							to_chat(O.owner.current, "<span class='danger'>You get the feeling your target is no longer within your reach. Time for Plan [pick(list("A","B","C","D","X","Y","Z"))].</span>")
-						O.target = null
-						spawn(1) //This should ideally fire after the occupant is deleted.
-							if(!O) return
-							O.find_target()
-							if(!(O.target))
-								all_objectives -= O
-								O.owner.objectives -= O
-								qdel(O)
-
 			if(ishuman(occupant))
 				var/mob/living/carbon/human/H = occupant
 				if(H.mind && H.assigned_squad)
@@ -335,7 +316,7 @@ var/global/list/frozen_items = list("Alpha"=list(),"Bravo"=list(),"Charlie"=list
 					switch(H.mind.assigned_role)
 						if("Squad Engineer")
 							S.num_engineers--
-						if("Squad Medic")
+						if("Squad Corpsman")
 							S.num_medics--
 						if("Squad Specialist")
 							S.num_specialists--
@@ -349,31 +330,27 @@ var/global/list/frozen_items = list("Alpha"=list(),"Bravo"=list(),"Charlie"=list
 					S.count--
 				H.assigned_squad?.clean_marine_from_squad(H,TRUE) //Remove from squad recods, if any.
 
-			ticker.mode.latejoin_tally-- //Cryoing someone out removes someone from the Marines, blocking further larva spawns until accounted for
+
+			if(isdistress(SSticker?.mode))
+				var/datum/game_mode/distress/D = SSticker.mode
+				D.latejoin_tally-- //Cryoing someone out removes someone from the Marines, blocking further larva spawns until accounted for
 
 			//Handle job slot/tater cleanup.
-			if(occupant.mind)
-				RoleAuthority.free_role(RoleAuthority.roles_for_mode[occupant.mind.assigned_role])
+			if(occupant.mind?.assigned_role)
+				var/datum/job/J = SSjob.name_occupations[occupant.mind.assigned_role]
+				J.current_positions--
 
-				if(occupant.mind.objectives.len)
-					qdel(occupant.mind.objectives)
-					occupant.mind.objectives = null
-					occupant.mind.special_role = null
-
-			//Delete them from datacore.
-			if(PDA_Manifest.len)
-				PDA_Manifest.Cut()
-			for(var/datum/data/record/R in data_core.medical)
+			for(var/datum/data/record/R in GLOB.datacore.medical)
 				if((R.fields["name"] == occupant.real_name))
-					data_core.medical -= R
+					GLOB.datacore.medical -= R
 					qdel(R)
-			for(var/datum/data/record/T in data_core.security)
+			for(var/datum/data/record/T in GLOB.datacore.security)
 				if((T.fields["name"] == occupant.real_name))
-					data_core.security -= T
+					GLOB.datacore.security -= T
 					qdel(T)
-			for(var/datum/data/record/G in data_core.general)
+			for(var/datum/data/record/G in GLOB.datacore.general)
 				if((G.fields["name"] == occupant.real_name))
-					data_core.general -= G
+					GLOB.datacore.general -= G
 					qdel(G)
 
 			if(orient_right)
@@ -401,7 +378,7 @@ var/global/list/frozen_items = list("Alpha"=list(),"Bravo"=list(),"Charlie"=list
 /obj/machinery/cryopod/attackby(obj/item/W, mob/living/user)
 
 	if(istype(W, /obj/item/grab))
-		if(isXeno(user)) return
+		if(isxeno(user)) return
 		var/obj/item/grab/G = W
 		if(occupant)
 			to_chat(user, "<span class='warning'>[src] is occupied.</span>")
@@ -417,7 +394,7 @@ var/global/list/frozen_items = list("Alpha"=list(),"Bravo"=list(),"Charlie"=list
 			to_chat(user, "<span class='warning'>[src] immediately rejects [M]. \He passed away!</span>")
 			return
 
-		if(isXeno(M))
+		if(isxeno(M))
 			to_chat(user, "<span class='warning'>There is no way [src] will accept [M]!</span>")
 			return
 
@@ -450,10 +427,8 @@ var/global/list/frozen_items = list("Alpha"=list(),"Bravo"=list(),"Charlie"=list
 			start_processing()
 			time_entered = world.time
 
-			//Book keeping!
-			var/turf/location = get_turf(src)
-			log_admin("[key_name_admin(M)] has entered a stasis pod. (<A HREF='?_src_=holder;adminplayerobservecoodjump=1;X=[location.x];Y=[location.y];Z=[location.z]'>JMP</a>)")
-			message_admins("<span class='notice'> [key_name_admin(M)] has entered a stasis pod.</span>")
+			log_admin("[key_name(M)] has entered a stasis pod.")
+			message_admins("[ADMIN_TPMONTY(M)] has entered a stasis pod.")
 
 			//Despawning occurs when process() is called with an occupant without a client.
 			add_fingerprint(M)
@@ -499,7 +474,7 @@ var/global/list/frozen_items = list("Alpha"=list(),"Bravo"=list(),"Charlie"=list
 		to_chat(usr, "<span class='warning'>[src] is occupied.</span>")
 		return
 
-	if(isXeno(usr))
+	if(isxeno(usr))
 		to_chat(usr, "<span class='warning'>There is no way [src] will accept you!</span>")
 		return
 

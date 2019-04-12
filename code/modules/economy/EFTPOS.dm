@@ -1,4 +1,4 @@
-/obj/item/device/eftpos
+/obj/item/eftpos
 	name = "EFTPOS scanner"
 	desc = "Swipe your ID card to make purchases electronically."
 	icon_state = "eftpos"
@@ -11,9 +11,9 @@
 	var/access_code = 0
 	var/datum/money_account/linked_account
 
-/obj/item/device/eftpos/New()
-	..()
-	machine_id = "[station_name()] EFTPOS #[num_financial_terminals++]"
+/obj/item/eftpos/Initialize()
+	. = ..()
+	machine_id = "EFTPOS #[num_financial_terminals++]"
 	access_code = rand(1111,111111)
 	spawn(0)
 		print_reference()
@@ -61,7 +61,7 @@
 	//the user of the EFTPOS device can change the target account though, and no-one will be the wiser (except whoever's being charged)
 	linked_account = station_account
 
-/obj/item/device/eftpos/proc/print_reference()
+/obj/item/eftpos/proc/print_reference()
 	var/obj/item/paper/R = new(src.loc)
 	R.name = "Reference: [eftpos_name]"
 	R.info = "<b>[eftpos_name] reference</b><br><br>"
@@ -81,7 +81,7 @@
 	D.wrapped = R
 	D.name = "small parcel - 'EFTPOS access code'"
 
-/obj/item/device/eftpos/attack_self(mob/user as mob)
+/obj/item/eftpos/attack_self(mob/user as mob)
 	if(get_dist(src,user) <= 1)
 		var/dat = "<b>[eftpos_name]</b><br>"
 		dat += "<i>This terminal is</i> [machine_id]. <i>Report this code when contacting NanoTrasen IT Support</i><br>"
@@ -109,13 +109,13 @@
 	else
 		user << browse(null,"window=eftpos")
 
-/obj/item/device/eftpos/attackby(O as obj, user as mob)
+/obj/item/eftpos/attackby(O as obj, user as mob)
 	if(istype(O, /obj/item/card))
 		if(linked_account)
 			var/obj/item/card/I = O
 			scan_card(I)
 		else
-			to_chat(usr, "\icon[src]<span class='warning'>Unable to connect to linked account.</span>")
+			to_chat(usr, "[icon2html(src, usr)]<span class='warning'>Unable to connect to linked account.</span>")
 	else if (istype(O, /obj/item/spacecash/ewallet))
 		var/obj/item/spacecash/ewallet/E = O
 		if (linked_account)
@@ -123,7 +123,7 @@
 				if(transaction_locked && !transaction_paid)
 					if(transaction_amount <= E.worth)
 						playsound(src, 'sound/machines/chime.ogg', 25, 1)
-						src.visible_message("\icon[src] The [src] chimes.")
+						src.visible_message("[icon2html(src, viewers(src))] The [src] chimes.")
 						transaction_paid = 1
 
 						//transfer the money
@@ -140,16 +140,16 @@
 						T.time = worldtime2text()
 						linked_account.transaction_log.Add(T)
 					else
-						to_chat(usr, "\icon[src]<span class='warning'>The charge card doesn't have that much money!</span>")
+						to_chat(usr, "[icon2html(src, usr)]<span class='warning'>The charge card doesn't have that much money!</span>")
 			else
-				to_chat(usr, "\icon[src]<span class='warning'>Connected account has been suspended.</span>")
+				to_chat(usr, "[icon2html(src, usr)]<span class='warning'>Connected account has been suspended.</span>")
 		else
-			to_chat(usr, "\icon[src]<span class='warning'>EFTPOS is not connected to an account.</span>")
+			to_chat(usr, "[icon2html(src, usr)]<span class='warning'>EFTPOS is not connected to an account.</span>")
 
 	else
 		..()
 
-/obj/item/device/eftpos/Topic(var/href, var/href_list)
+/obj/item/eftpos/Topic(var/href, var/href_list)
 	if(href_list["choice"])
 		switch(href_list["choice"])
 			if("change_code")
@@ -162,14 +162,14 @@
 						alert("That is not a valid code!")
 					print_reference()
 				else
-					to_chat(usr, "\icon[src]<span class='warning'>Incorrect code entered.</span>")
+					to_chat(usr, "[icon2html(src, usr)]<span class='warning'>Incorrect code entered.</span>")
 			if("change_id")
 				var/attempt_code = text2num(input("Re-enter the current EFTPOS access code", "Confirm EFTPOS code"))
 				if(attempt_code == access_code)
 					eftpos_name = input("Enter a new terminal ID for this device", "Enter new EFTPOS ID") + " EFTPOS scanner"
 					print_reference()
 				else
-					to_chat(usr, "\icon[src]<span class='warning'>Incorrect code entered.</span>")
+					to_chat(usr, "[icon2html(src, usr)]<span class='warning'>Incorrect code entered.</span>")
 			if("link_account")
 				var/attempt_account_num = input("Enter account number to pay EFTPOS charges into", "New account number") as num
 				var/attempt_pin = input("Enter pin code", "Account pin") as num
@@ -177,9 +177,9 @@
 				if(linked_account)
 					if(linked_account.suspended)
 						linked_account = null
-						to_chat(usr, "\icon[src]<span class='warning'>Account has been suspended.</span>")
+						to_chat(usr, "[icon2html(src, usr)]<span class='warning'>Account has been suspended.</span>")
 				else
-					to_chat(usr, "\icon[src]<span class='warning'>Account not found.</span>")
+					to_chat(usr, "[icon2html(src, usr)]<span class='warning'>Account not found.</span>")
 			if("trans_purpose")
 				var/choice = input("Enter reason for EFTPOS transaction", "Transaction purpose")
 				if(choice) transaction_purpose = choice
@@ -202,14 +202,14 @@
 				else if(linked_account)
 					transaction_locked = 1
 				else
-					to_chat(usr, "\icon[src]<span class='warning'>No account connected to send transactions to.</span>")
+					to_chat(usr, "[icon2html(src, usr)]<span class='warning'>No account connected to send transactions to.</span>")
 			if("scan_card")
 				if(linked_account)
 					var/obj/item/I = usr.get_active_held_item()
 					if (istype(I, /obj/item/card))
 						scan_card(I)
 				else
-					to_chat(usr, "\icon[src]<span class='warning'>Unable to link accounts.</span>")
+					to_chat(usr, "[icon2html(src, usr)]<span class='warning'>Unable to link accounts.</span>")
 			if("reset")
 				//reset the access code - requires HoP/captain access
 				var/obj/item/I = usr.get_active_held_item()
@@ -217,14 +217,14 @@
 					var/obj/item/card/id/C = I
 					if(ACCESS_MARINE_LOGISTICS in C.access)
 						access_code = 0
-						to_chat(usr, "\icon[src]<span class='info'>Access code reset to 0.</span>")
+						to_chat(usr, "[icon2html(src, usr)]<span class='info'>Access code reset to 0.</span>")
 				else if (istype(I, /obj/item/card/emag))
 					access_code = 0
-					to_chat(usr, "\icon[src]<span class='info'>Access code reset to 0.</span>")
+					to_chat(usr, "[icon2html(src, usr)]<span class='info'>Access code reset to 0.</span>")
 
 	src.attack_self(usr)
 
-/obj/item/device/eftpos/proc/scan_card(var/obj/item/card/I)
+/obj/item/eftpos/proc/scan_card(var/obj/item/card/I)
 	if (istype(I, /obj/item/card/id))
 		var/obj/item/card/id/C = I
 		visible_message("<span class='info'>[usr] swipes a card through [src].</span>")
@@ -241,7 +241,7 @@
 						if(!D.suspended)
 							if(transaction_amount <= D.money)
 								playsound(src, 'sound/machines/chime.ogg', 25, 1)
-								src.visible_message("\icon[src] The [src] chimes.")
+								src.visible_message("[icon2html(src, viewers(src))] The [src] chimes.")
 								transaction_paid = 1
 
 								//transfer the money
@@ -270,25 +270,25 @@
 								T.time = worldtime2text()
 								linked_account.transaction_log.Add(T)
 							else
-								to_chat(usr, "\icon[src]<span class='warning'>You don't have that much money!</span>")
+								to_chat(usr, "[icon2html(src, usr)]<span class='warning'>You don't have that much money!</span>")
 						else
-							to_chat(usr, "\icon[src]<span class='warning'>Your account has been suspended.</span>")
+							to_chat(usr, "[icon2html(src, usr)]<span class='warning'>Your account has been suspended.</span>")
 					else
-						to_chat(usr, "\icon[src]<span class='warning'>Unable to access account. Check security settings and try again.</span>")
+						to_chat(usr, "[icon2html(src, usr)]<span class='warning'>Unable to access account. Check security settings and try again.</span>")
 				else
-					to_chat(usr, "\icon[src]<span class='warning'>Connected account has been suspended.</span>")
+					to_chat(usr, "[icon2html(src, usr)]<span class='warning'>Connected account has been suspended.</span>")
 			else
-				to_chat(usr, "\icon[src]<span class='warning'>EFTPOS is not connected to an account.</span>")
+				to_chat(usr, "[icon2html(src, usr)]<span class='warning'>EFTPOS is not connected to an account.</span>")
 	else if (istype(I, /obj/item/card/emag))
 		if(transaction_locked)
 			if(transaction_paid)
-				to_chat(usr, "\icon[src]<span class='info'>You stealthily swipe [I] through [src].</span>")
+				to_chat(usr, "[icon2html(src, usr)]<span class='info'>You stealthily swipe [I] through [src].</span>")
 				transaction_locked = 0
 				transaction_paid = 0
 			else
 				visible_message("<span class='info'>[usr] swipes a card through [src].</span>")
 				playsound(src, 'sound/machines/chime.ogg', 25, 1)
-				src.visible_message("\icon[src] The [src] chimes.")
+				src.visible_message("[icon2html(src, viewers(src))] The [src] chimes.")
 				transaction_paid = 1
 	else
 		..()

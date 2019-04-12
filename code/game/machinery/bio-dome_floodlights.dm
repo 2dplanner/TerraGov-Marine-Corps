@@ -8,15 +8,14 @@
 	var/ispowered = 0
 	var/turned_on = 0 //has to be toggled in engineering
 	use_power = 1
-	unacidable = 1
+	resistance_flags = UNACIDABLE
 	var/list/floodlist = list() // This will save our list of floodlights on the map
 
-/obj/machinery/hydro_floodlight_switch/New() //Populate our list of floodlights so we don't need to scan for them ever again
-	sleep(5) //let's make sure it exists first..
-	for(var/obj/machinery/hydro_floodlight/F in machines)
+/obj/machinery/hydro_floodlight_switch/Initialize() //Populate our list of floodlights so we don't need to scan for them ever again
+	for(var/obj/machinery/hydro_floodlight/F in GLOB.machines)
 		floodlist += F
 		F.fswitch = src
-	..()
+	. = ..()
 	start_processing()
 
 /obj/machinery/hydro_floodlight_switch/process()
@@ -37,7 +36,7 @@
 
 /obj/machinery/hydro_floodlight_switch/power_change()
 	..()
-	if((stat & NOPOWER))
+	if((machine_stat & NOPOWER))
 		if(ispowered && turned_on)
 			toggle_lights()
 		ispowered = 0
@@ -85,7 +84,7 @@
 	anchored = 1
 	var/damaged = 0 //Can be smashed by xenos
 	var/is_lit = 0
-	unacidable = 1
+	resistance_flags = UNACIDABLE
 	var/power_tick = 800 // power each floodlight takes up per process
 	use_power = 0 //It's the switch that uses the actual power, not the lights
 	var/obj/machinery/hydro_floodlight_switch/fswitch = null //Reverse lookup for power grabbing in area
@@ -139,7 +138,7 @@
 			to_chat(user, "<span class='warning'>It's already damaged.</span>")
 			return 0
 		else
-			if(isXenoLarva(user))
+			if(isxenolarva(user))
 				return //Larvae can't do shit
 			if(user.get_active_held_item())
 				to_chat(user, "<span class='warning'>You need your claws empty for this!</span>")

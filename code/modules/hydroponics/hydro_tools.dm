@@ -4,15 +4,15 @@
 	name = "plant clippers"
 	desc = "A tool used to take samples from plants."
 
-/obj/item/device/analyzer/plant_analyzer
+/obj/item/analyzer/plant_analyzer
 	name = "plant analyzer"
 	icon_state = "hydro"
 	item_state = "analyzer"
 
-/obj/item/device/analyzer/plant_analyzer/attack_self(mob/user as mob)
+/obj/item/analyzer/plant_analyzer/attack_self(mob/user as mob)
 	return 0
 
-/obj/item/device/analyzer/plant_analyzer/afterattack(obj/target, mob/user, flag)
+/obj/item/analyzer/plant_analyzer/afterattack(obj/target, mob/user, flag)
 	if(!flag) return
 
 	var/datum/seed/grown_seed
@@ -22,13 +22,13 @@
 	else if(istype(target,/obj/item/reagent_container/food/snacks/grown))
 
 		var/obj/item/reagent_container/food/snacks/grown/G = target
-		grown_seed = seed_types[G.plantname]
+		grown_seed = GLOB.seed_types[G.plantname]
 		grown_reagents = G.reagents
 
 	else if(istype(target,/obj/item/grown))
 
 		var/obj/item/grown/G = target
-		grown_seed = seed_types[G.plantname]
+		grown_seed = GLOB.seed_types[G.plantname]
 		grown_reagents = G.reagents
 
 	else if(istype(target,/obj/item/seeds))

@@ -96,14 +96,17 @@
 	update_cloak()
 
 /mob/living/Initialize()
-	..()
+	. = ..()
 	attack_icon = image("icon" = 'icons/effects/attacks.dmi',"icon_state" = "", "layer" = 0)
+	GLOB.mob_living_list += src
 
 /mob/living/Destroy()
 	if(attack_icon)
 		qdel(attack_icon)
 		attack_icon = null
-	. = ..()
+	GLOB.mob_living_list -= src
+	GLOB.offered_mob_list -= src
+	return ..()
 
 
 
@@ -116,7 +119,7 @@
 
 //sort of a legacy burn method for /electrocute, /shock, and the e_chair
 /mob/living/proc/burn_skin(burn_amount)
-	if(istype(src, /mob/living/carbon/human))
+	if(ishuman(src))
 		//to_chat(world, "DEBUG: burn_skin(), mutations=[mutations]")
 		if(mShock in src.mutations) //shockproof
 			return 0
@@ -127,18 +130,18 @@
 		var/extradam = 0	//added to when organ is at max dam
 		for(var/datum/limb/affecting in H.limbs)
 			if(!affecting)	continue
-			if(affecting.take_damage(0, divided_damage+extradam))	//TODO: fix the extradam stuff. Or, ebtter yet...rewrite this entire proc ~Carn
+			if(affecting.take_damage_limb(0, divided_damage + extradam))	//TODO: fix the extradam stuff. Or, ebtter yet...rewrite this entire proc ~Carn
 				H.UpdateDamageIcon()
 		H.updatehealth()
 		return 1
-	else if(istype(src, /mob/living/carbon/monkey))
+	else if(ismonkey(src))
 		if (COLD_RESISTANCE in src.mutations) //fireproof
 			return 0
 		var/mob/living/carbon/monkey/M = src
 		M.adjustFireLoss(burn_amount)
 		M.updatehealth()
 		return 1
-	else if(istype(src, /mob/living/silicon/ai))
+	else if(isAI(src))
 		return 0
 
 /mob/living/proc/adjustBodyTemp(actual, desired, incrementboost)
@@ -157,7 +160,7 @@
 		temperature -= change
 		if(actual < desired)
 			temperature = desired
-//	if(istype(src, /mob/living/carbon/human))
+//	if(ishuman(src))
 //		to_chat(world, "[src] ~ [src.bodytemperature] ~ [temperature]")
 	return temperature
 
@@ -173,10 +176,6 @@
 	if(Storage) //If it called itself
 		L += Storage.return_inv()
 
-		//Leave this commented out, it will cause storage items to exponentially add duplicate to the list
-		//for(var/obj/item/storage/S in Storage.return_inv()) //Check for storage items
-		//	L += get_contents(S)
-
 		for(var/obj/item/gift/G in Storage.return_inv()) //Check for gift-wrapped items
 			L += G.gift
 			if(istype(G.gift, /obj/item/storage))
@@ -190,28 +189,29 @@
 
 	else
 
-		L += src.contents
-		for(var/obj/item/storage/S in src.contents)	//Check for storage items
+		L += contents
+		for(var/obj/item/storage/S in contents)	//Check for storage items
 			L += get_contents(S)
 
-		for(var/obj/item/gift/G in src.contents) //Check for gift-wrapped items
+		for(var/obj/item/gift/G in contents) //Check for gift-wrapped items
 			L += G.gift
 			if(istype(G.gift, /obj/item/storage))
 				L += get_contents(G.gift)
 
-		for(var/obj/item/smallDelivery/D in src.contents) //Check for package wrapped items
+		for(var/obj/item/smallDelivery/D in contents) //Check for package wrapped items
 			L += D.wrapped
 			if(istype(D.wrapped, /obj/item/storage)) //this should never happen
 				L += get_contents(D.wrapped)
 		return L
 
-/mob/living/proc/check_contents_for(A)
-	var/list/L = src.get_contents()
 
-	for(var/obj/B in L)
-		if(B.type == A)
-			return 1
-	return 0
+/mob/living/proc/check_contents_for(A)
+	var/list/L = get_contents()
+
+	for(var/obj/O in L)
+		if(O.type == A)
+			return TRUE
+	return FALSE
 
 
 /mob/living/proc/get_limbzone_target()
@@ -270,7 +270,11 @@
 		s_active.close(src)
 
 
-
+/mob/living/vv_get_dropdown()
+	. = ..()
+	. += "---"
+	.["Add Language"] = "?_src_=vars;[HrefToken()];addlanguage=[REF(src)]"
+	.["Remove Language"] = "?_src_=vars;[HrefToken()];remlanguage=[REF(src)]"
 
 
 /mob/proc/resist_grab(moving_resist)
@@ -315,16 +319,13 @@
 	return FALSE
 
 /mob/living/carbon/human/ignore_pull_delay()
-	return has_species(src,"Yautja") //Predators aren't slowed when pulling their prey.
-
-/mob/living/proc/can_inject()
-	return TRUE
+	return FALSE
 
 /mob/living/is_injectable(allowmobs = TRUE)
-	return (allowmobs && reagents && can_inject())
+	return (allowmobs && can_inject())
 
 /mob/living/is_drawable(allowmobs = TRUE)
-	return (allowmobs && reagents && can_inject())
+	return (allowmobs && can_inject())
 
 /mob/living/Bump(atom/movable/AM, yes)
 	if(buckled || !yes || now_pushing)
@@ -340,20 +341,20 @@
 			now_pushing = 0
 			return
 
-		if(isXeno(L) && !isXenoLarva(L)) //Handling pushing Xenos in general, but big Xenos and Preds can still push small Xenos
+		if(isxeno(L) && !isxenolarva(L)) //Handling pushing Xenos in general, but big Xenos can still push small Xenos
 			var/mob/living/carbon/Xenomorph/X = L
-			if((ishuman(src) && X.mob_size == MOB_SIZE_BIG) || (isXeno(src) && X.mob_size == MOB_SIZE_BIG))
-				if(!isXeno(src) && client)
+			if((ishuman(src) && X.mob_size == MOB_SIZE_BIG) || (isxeno(src) && X.mob_size == MOB_SIZE_BIG))
+				if(!isxeno(src) && client)
 					do_bump_delay = 1
 				now_pushing = 0
 				return
 
-		if(isXeno(src) && !isXenoLarva(src) && ishuman(L)) //We are a Xenomorph and pushing a human
+		if(isxeno(src) && !isxenolarva(src) && ishuman(L)) //We are a Xenomorph and pushing a human
 			var/mob/living/carbon/Xenomorph/X = src
 			if(X.mob_size == MOB_SIZE_BIG)
 				L.do_bump_delay = 1
 
-		if(L.pulledby && L.pulledby != src && L.is_mob_restrained())
+		if(L.pulledby && L.pulledby != src && L.restrained())
 			if(!(world.time % 5))
 				to_chat(src, "<span class='warning'>[L] is restrained, you cannot push past.</span>")
 			now_pushing = 0
@@ -362,7 +363,7 @@
  		if(L.pulling)
  			if(ismob(L.pulling))
  				var/mob/P = L.pulling
- 				if(P.is_mob_restrained())
+ 				if(P.restrained())
  					if(!(world.time % 5))
  						to_chat(src, "<span class='warning'>[L] is restraining [P], you cannot push past.</span>")
 					now_pushing = 0
@@ -386,10 +387,10 @@
 		if(!L.buckled && !L.anchored)
 			var/mob_swap
 			//the puller can always swap with its victim if on grab intent
-			if(L.pulledby == src && a_intent == "grab")
+			if(L.pulledby == src && a_intent == INTENT_GRAB)
 				mob_swap = 1
 			//restrained people act if they were on 'help' intent to prevent a person being pulled from being seperated from their puller
-			else if((L.is_mob_restrained() || L.a_intent == "help") && (is_mob_restrained() || a_intent == "help"))
+			else if((L.restrained() || L.a_intent == INTENT_HELP) && (restrained() || a_intent == INTENT_HELP))
 				mob_swap = 1
 			if(mob_swap)
 				//switch our position with L
@@ -422,7 +423,7 @@
 
 	now_pushing = 0
 	..()
-	if (!( istype(AM, /atom/movable) ))
+	if (!ismovableatom(AM))
 		return
 	if (!( now_pushing ))
 		now_pushing = 1
@@ -443,7 +444,12 @@
 	if(!target || !src)	return 0
 	if(pulling) stop_pulling() //being thrown breaks pulls.
 	if(pulledby) pulledby.stop_pulling()
+	set_frozen(TRUE) //can't move while being thrown
+	update_canmove()
 	. = ..()
+	set_frozen(FALSE)
+	update_canmove()
+
 //to make an attack sprite appear on top of the target atom.
 /mob/living/proc/flick_attack_overlay(atom/target, attack_icon_state)
 	set waitfor = 0
@@ -471,6 +477,13 @@
 		attack_icon.pixel_y = new_pix_y
 
 
+/mob/living/proc/offer_mob()
+	GLOB.offered_mob_list += src
+	for(var/i in GLOB.observer_list)
+		var/mob/dead/observer/O = i
+		to_chat(O, "<br><hr><span class='boldnotice'>A mob is being offered! Name: [name][job ? " Job: [job]" : ""] \[<a href='byond://?src=[REF(O)];claim=[REF(src)]'>CLAIM</a>\] \[<a href='byond://?src=[REF(O)];track=[REF(src)]'>FOLLOW</a>\]</span><hr><br>")
+
+
 //used in datum/reagents/reaction() proc
 /mob/living/proc/get_permeability_protection()
 	return LIVING_PERM_COEFF
@@ -480,10 +493,31 @@
 
 /mob/living/flash_eyes(intensity = 1, bypass_checks, type = /obj/screen/fullscreen/flash)
 	if( bypass_checks || (get_eye_protection() < intensity && !(disabilities & BLIND)) )
-		overlay_fullscreen("flash", type)
-		spawn(40)
-			clear_fullscreen("flash", 20)
-		return 1
+		overlay_fullscreen_timer(40, 20, "flash", type)
+		return TRUE
+
+/mob/living/proc/disable_lights(armor = TRUE, guns = TRUE, flares = TRUE, misc = TRUE, sparks = FALSE, silent = FALSE)
+	return FALSE
+
+/mob/living/update_tint()
+	tinttotal = get_total_tint()
+	if(tinttotal >= TINT_BLIND)
+		blind_eyes(1)
+		return TRUE
+	else if(eye_blind == 1)
+		adjust_blindness(-1)
+	if(tinttotal == TINT_HEAVY)
+		overlay_fullscreen("tint", /obj/screen/fullscreen/impaired, 2)
+		return TRUE
+	else
+		clear_fullscreen("tint", 0)
+		return FALSE
+
+/mob/living/proc/get_total_tint()
+	if(iscarbon(loc))
+		var/mob/living/carbon/C = loc
+		if(src in C.stomach_contents)
+			. = TINT_BLIND
 
 /mob/living/proc/smokecloak_on()
 
@@ -492,7 +526,7 @@
 
 	alpha = 5 // bah, let's make it better, it's a disposable device anyway
 
-	if(!isXeno(src)||!isanimal(src))
+	if(!isxeno(src)||!isanimal(src))
 		var/datum/mob_hud/security/advanced/SA = huds[MOB_HUD_SECURITY_ADVANCED]
 		SA.remove_from_hud(src)
 		var/datum/mob_hud/xeno_infection/XI = huds[MOB_HUD_XENO_INFECTION]
@@ -507,7 +541,7 @@
 
 	alpha = initial(alpha)
 
-	if(!isXeno(src)|| !isanimal(src))
+	if(!isxeno(src)|| !isanimal(src))
 		var/datum/mob_hud/security/advanced/SA = huds[MOB_HUD_SECURITY_ADVANCED]
 		SA.add_to_hud(src)
 		var/datum/mob_hud/xeno_infection/XI = huds[MOB_HUD_XENO_INFECTION]
@@ -575,3 +609,42 @@ below 100 is not dizzy
 	for(var/X in actions)
 		var/datum/action/A = X
 		A.update_button_icon()
+
+
+/mob/living/proc/equip_preference_gear(client/C)
+	if(!C?.prefs || !istype(back, /obj/item/storage/backpack))
+		return
+
+	var/datum/preferences/P = C.prefs
+	var/list/gear = P.gear
+
+	if(!length(gear))
+		return
+
+	for(var/i in GLOB.gear_datums)
+		var/datum/gear/G = GLOB.gear_datums[i]
+		if(!G || !gear.Find(i))
+			continue
+		equip_to_slot_or_del(new G.path, SLOT_IN_BACKPACK)
+
+/mob/living/proc/vomit()
+	return
+
+
+/mob/living/proc/take_over(mob/M, bypass)
+	if(!M.mind)
+		to_chat(M, "<span class='warning'>You don't have a mind.</span>")
+		return FALSE
+	if(!bypass && (key || ckey))
+		to_chat(M, "<span class='warning'>That mob has already been taken.</span>")
+		return FALSE
+	if(!bypass && job && (is_banned_from(M.ckey, job) || jobban_isbanned(M, job)))
+		to_chat(M, "<span class='warning'>You are jobbanned from that job.</span>")
+		return FALSE
+
+	log_admin("[key_name(M)] has taken [key_name_admin(src)].")
+	message_admins("[key_name_admin(M)] has taken [ADMIN_TPMONTY(src)].")
+
+	M.mind.transfer_to(src, TRUE)
+	M.fully_replace_character_name(M.real_name, real_name)
+	GLOB.offered_mob_list -= src

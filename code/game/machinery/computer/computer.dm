@@ -9,7 +9,7 @@
 	active_power_usage = 300
 	var/circuit = null //The path to the circuit board type. If circuit==null, the computer can't be disassembled.
 	var/processing = 0
-	var/exproof = 0
+	resistance_flags = UNACIDABLE
 
 /obj/machinery/computer/Initialize()
 	. = ..()
@@ -17,7 +17,7 @@
 	power_change()
 
 /obj/machinery/computer/process()
-	if(stat & (NOPOWER|BROKEN))
+	if(machine_stat & (NOPOWER|BROKEN))
 		return 0
 	return 1
 
@@ -27,8 +27,8 @@
 
 
 /obj/machinery/computer/ex_act(severity)
-	if(exproof)
-		return
+	if(CHECK_BITFIELD(resistance_flags, INDESTRUCTIBLE))
+		return FALSE
 	switch(severity)
 		if(1.0)
 			qdel(src)
@@ -50,7 +50,7 @@
 	return
 
 /obj/machinery/computer/bullet_act(var/obj/item/projectile/Proj)
-	if(exproof)
+	if(CHECK_BITFIELD(resistance_flags, INDESTRUCTIBLE))
 		visible_message("[Proj] ricochets off [src]!")
 		return 0
 	else
@@ -63,11 +63,11 @@
 	..()
 	icon_state = initial(icon_state)
 	// Broken
-	if(stat & BROKEN)
+	if(machine_stat & BROKEN)
 		icon_state += "b"
 
 	// Powered
-	else if(stat & NOPOWER)
+	else if(machine_stat & NOPOWER)
 		icon_state = initial(icon_state)
 		icon_state += "0"
 
@@ -79,7 +79,7 @@
 
 
 /obj/machinery/computer/proc/set_broken()
-	stat |= BROKEN
+	machine_stat |= BROKEN
 	update_icon()
 
 /obj/machinery/computer/proc/decode(text)
@@ -89,7 +89,7 @@
 
 
 /obj/machinery/computer/attackby(obj/item/I, mob/user)
-	if(istype(I, /obj/item/tool/screwdriver) && circuit)
+	if(isscrewdriver(I) && circuit)
 		if(user.mind && user.mind.cm_skills && user.mind.cm_skills.engineer < SKILL_ENGINEER_MT)
 			user.visible_message("<span class='notice'>[user] fumbles around figuring out how to deconstruct [src].</span>",
 			"<span class='notice'>You fumble around figuring out how to deconstruct [src].</span>")
@@ -103,7 +103,7 @@
 			A.anchored = 1
 			for (var/obj/C in src)
 				C.loc = src.loc
-			if (src.stat & BROKEN)
+			if (src.machine_stat & BROKEN)
 				to_chat(user, "<span class='notice'>The broken glass falls out.</span>")
 				new /obj/item/shard( src.loc )
 				A.state = 3
@@ -115,7 +115,7 @@
 			M.deconstruct(src)
 			qdel(src)
 	else
-		if(isXeno(user))
+		if(isxeno(user))
 			src.attack_alien(user)
 			return
 		src.attack_hand(user)

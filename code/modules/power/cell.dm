@@ -2,12 +2,11 @@
 // charge from 0 to 100%
 // fits in APC to provide backup power
 
-/obj/item/cell/New()
-	..()
+/obj/item/cell/Initialize()
+	. = ..()
 	charge = maxcharge
 
-	spawn(5)
-		updateicon()
+	updateicon()
 
 /obj/item/cell/proc/updateicon()
 	overlays.Cut()
@@ -27,13 +26,14 @@
 
 // use power from a cell
 /obj/item/cell/proc/use(var/amount)
-	if(rigged && amount > 0)
+	if(rigged)
 		explode()
-		return 0
+		return FALSE
 
-	if(charge < amount)	return 0
+	if(charge < amount)
+		return FALSE
 	charge = (charge - amount)
-	return 1
+	return TRUE
 
 // recharge the cell
 /obj/item/cell/proc/give(var/amount)
@@ -79,43 +79,52 @@
 /obj/item/cell/attack_self(mob/user as mob)
 	add_fingerprint(user)
 	if(rigged)
+		if(issynth(user) && !CONFIG_GET(flag/allow_synthetic_gun_use))
+			to_chat(user, "<span class='warning'>Your programming restricts using rigged power cells.</span>")
+			return
+		log_explosion("[key_name(user)] primed a rigged [src] at [AREACOORD(user.loc)].")
+		log_combat(user, src, "primed a rigged")
 		user.visible_message("<span class='danger'>[user] destabilizes [src]; it will detonate shortly!</span>",
 		"<span class='danger'>You destabilize [src]; it will detonate shortly!</span>")
-		msg_admin_attack("[key_name(user)] (<A HREF='?_src_=holder;adminplayerobservecoodjump=1;X=[usr.x];Y=[user.y];Z=[user.z]'>JMP</a>) (<A HREF='?_src_=holder;adminplayerfollow=\ref[usr]'>FLW</a>) (<A HREF='?_src_=holder;adminmoreinfo=\ref[user]'>?</A>) primed \a [src].")
 		var/datum/effect_system/spark_spread/spark_system = new /datum/effect_system/spark_spread()
 		spark_system.set_up(5, 0, src)
 		spark_system.attach(src)
 		spark_system.start(src)
 		playsound(loc, 'sound/items/Welder2.ogg', 25, 1, 6)
+		if(iscarbon(user))
+			var/mob/living/carbon/C = user
+			C.throw_mode_on()
 		overlays += new/obj/effect/overlay/danger
-		spawn(rand(10,50))
+		spawn(rand(3,50))
 			spark_system.start(src)
 			explode()
 
 	return ..()
 
 /obj/item/cell/attackby(obj/item/W, mob/user)
-	..()
+	. = ..()
 	if(istype(W, /obj/item/reagent_container/syringe))
+		if(issynth(user) && !CONFIG_GET(flag/allow_synthetic_gun_use))
+			to_chat(user, "<span class='warning'>Your programming restricts rigging of power cells.</span>")
+			return
 		var/obj/item/reagent_container/syringe/S = W
 
 		to_chat(user, "You inject the solution into the power cell.")
 
 		if(S.reagents.has_reagent("phoron", 5))
-
-			rigged = 1
-
-			log_admin("LOG: [user.name] ([user.ckey]) injected a power cell with phoron, rigging it to explode.")
-			message_admins("LOG: [user.name] ([user.ckey]) injected a power cell with phoron, rigging it to explode.")
-
+			rigged = TRUE
 		S.reagents.clear_reagents()
-	else if(istype(W, /obj/item/device/multitool))
+	else if(ismultitool(W))
+		if(issynth(user) && !CONFIG_GET(flag/allow_synthetic_gun_use))
+			to_chat(user, "<span class='warning'>Your programming restricts rigging of power cells.</span>")
+			return
 		var/delay = SKILL_TASK_EASY
 		var/skill
 		if(user.mind && user.mind.cm_skills && user.mind.cm_skills.engineer) //Higher skill lowers the delay.
 			skill = user.mind.cm_skills.engineer
 			delay -= 5 + skill * 1.25
 
+		var/obj/effect/overlay/sparks/spark_overlay = new/obj/effect/overlay/sparks
 		if(!rigged)
 			if(skill < SKILL_ENGINEER_ENGI) //Field engi skill or better or ya fumble.
 				user.visible_message("<span class='notice'>[user] fumbles around figuring out how to manipulate [src].</span>",
@@ -131,6 +140,7 @@
 			if(!do_after(user, delay, TRUE, 5, BUSY_ICON_BUILD, null, TRUE))
 				return
 			rigged = TRUE
+			overlays += spark_overlay
 			user.visible_message("<span class='notice'>[user] finishes manipulating [src] with [W].</span>",
 			"<span class='notice'>You rig [src] to explode on use with [W].</span>")
 		else
@@ -151,6 +161,7 @@
 			if(!do_after(user, delay, TRUE, 5, BUSY_ICON_BUILD, null, TRUE))
 				return
 			rigged = FALSE
+			overlays -= spark_overlay
 			user.visible_message("<span class='notice'>[user] finishes manipulating [src] with [W].</span>",
 			"<span class='notice'>You stabilize the [src] with [W]; it will no longer detonate on use.</span>")
 
@@ -163,25 +174,14 @@
  * 10000-cell	explosion(T, -1, 1, 3, 3)
  * 15000-cell	explosion(T, -1, 2, 4, 4)
  * */
-	if (charge==0)
-		return
 	var/devastation_range = -1 //round(charge/11000)
-	var/heavy_impact_range = max(2,round(sqrt(charge)/100))
-	var/light_impact_range = max(3,round(sqrt(charge)/30))
-	var/flash_range = light_impact_range
-	if (light_impact_range==0)
-		rigged = 0
-		corrupt()
-		return
-	//explosion(T, 0, 1, 2, 2)
-
-	log_admin("LOG: Rigged power cell explosion, last touched by [fingerprintslast]")
-	message_admins("LOG: Rigged power cell explosion, last touched by [fingerprintslast]")
+	var/heavy_impact_range = CLAMP(round(sqrt(charge) * 0.01), -1, 2)
+	var/light_impact_range = CLAMP(round(sqrt(charge) * 0.15), -1, 3)
+	var/flash_range = CLAMP(round(sqrt(charge) * 0.15), -1, 4)
 
 	explosion(T, devastation_range, heavy_impact_range, light_impact_range, flash_range)
 
-	spawn(1)
-		qdel(src)
+	QDEL_IN(src, 1)
 
 /obj/item/cell/proc/corrupt()
 	charge /= 2

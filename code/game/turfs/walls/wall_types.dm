@@ -1,7 +1,3 @@
-
-
-
-
 //-----TGS Theseus Walls ---//
 
 /turf/closed/wall/almayer
@@ -12,9 +8,9 @@
 	walltype = "testwall"
 
 	damage = 0
-	damage_cap = 10000 //Wall will break down to girders if damage reaches this point
+	damage_cap = 3000 //Wall will break down to girders if damage reaches this point
 
-	max_temperature = 18000 //K, walls will take damage if they're next to a fire hotter than this
+	max_temperature = 28000 //K, walls will take damage if they're next to a fire hotter than this
 
 	opacity = 1
 	density = 1
@@ -35,12 +31,18 @@
 		icon_state = "[walltype][junction]"
 	junctiontype = junction
 
+/turf/closed/wall/almayer/nosmooth //for SD and other special walls
+	tiles_with = list(/turf/closed/wall,/obj/structure/window/framed,/obj/structure/window_frame,/obj/structure/girder)
+
 /turf/closed/wall/almayer/outer
 	name = "outer hull"
 	desc = "A huge chunk of metal used to seperate space from the ship"
 	//icon_state = "testwall0_debug" //Uncomment to check hull in the map editor.
 	walltype = "testwall"
 	hull = 1 //Impossible to destroy or even damage. Used for outer walls that would breach into space, potentially some special walls
+
+/turf/closed/wall/almayer/outer/reinforced
+	name = "reinforced hull"
 
 /turf/closed/wall/almayer/white
 	walltype = "wwall"
@@ -115,7 +117,7 @@
 	icon_state = "sulaco0"
 	hull = 0 //Can't be deconstructed
 
-	damage_cap = 8000 //As tough as R_walls.
+	damage_cap = 3000
 	max_temperature = 28000 //K, walls will take damage if they're next to a fire hotter than this
 	walltype = "sulaco" //Changes all the sprites and icons.
 
@@ -157,11 +159,6 @@
 
 
 
-
-
-
-
-
 /turf/closed/wall/indestructible
 	name = "wall"
 	icon = 'icons/turf/walls.dmi'
@@ -169,19 +166,21 @@
 	opacity = 1
 	hull = 1
 
-/turf/closed/wall/indestructible/ex_act(severity) //Should make it indestructable
+/turf/closed/wall/indestructible/ex_act(severity)
 	return
 
 /turf/closed/wall/indestructible/fire_act(exposed_temperature, exposed_volume)
 	return
 
-/turf/closed/wall/indestructible/attackby() //This should fix everything else. No cables, etc
+/turf/closed/wall/indestructible/attackby()
 	return
 
 /turf/closed/wall/indestructible/can_be_dissolved()
 	return 0
 
-
+/turf/closed/wall/indestructible/mineral
+	name = "impenetrable rock"
+	icon_state = "rock_dark"
 
 /turf/closed/wall/indestructible/bulkhead
 	name = "bulkhead"
@@ -207,11 +206,6 @@
 
 /turf/closed/wall/indestructible/other
 	icon_state = "r_wall"
-
-
-
-
-
 
 // Mineral Walls
 
@@ -377,6 +371,12 @@
 /turf/closed/wall/resin/flamer_fire_act()
 	take_damage(50)
 
+/turf/closed/wall/resin/proc/thicken()
+	var/prev_oldturf = oldTurf
+	ChangeTurf(/turf/closed/wall/resin/thick)
+	oldTurf = prev_oldturf
+	return TRUE
+
 //this one is only for map use
 /turf/closed/wall/resin/ondirt
 	oldTurf = "/turf/open/gm/dirt"
@@ -388,6 +388,9 @@
 	icon_state = "thickresin0"
 	walltype = "thickresin"
 
+/turf/closed/wall/resin/thick/thicken()
+	return FALSE
+
 /turf/closed/wall/resin/membrane
 	name = "resin membrane"
 	desc = "Weird slime translucent enough to let light pass through."
@@ -396,6 +399,11 @@
 	damage_cap = 120
 	opacity = 0
 	alpha = 180
+
+/turf/closed/wall/resin/membrane/thicken()
+	var/prev_oldturf = oldTurf
+	ChangeTurf(/turf/closed/wall/resin/membrane/thick)
+	oldTurf = prev_oldturf
 
 //this one is only for map use
 /turf/closed/wall/resin/membrane/ondirt
@@ -440,7 +448,7 @@
 
 
 /turf/closed/wall/resin/attack_alien(mob/living/carbon/Xenomorph/M)
-	if(isXenoLarva(M)) //Larvae can't do shit
+	if(isxenolarva(M)) //Larvae can't do shit
 		return 0
 	M.animation_attack_on(src)
 	M.visible_message("<span class='xenonotice'>\The [M] claws \the [src]!</span>", \
@@ -467,6 +475,7 @@
 
 /turf/closed/wall/resin/attackby(obj/item/W, mob/living/user)
 	if(!(W.flags_item & NOBLUDGEON))
+		user.changeNext_move(W.attack_speed)
 		user.animation_attack_on(src)
 		var/damage = W.force
 		var/multiplier = 1

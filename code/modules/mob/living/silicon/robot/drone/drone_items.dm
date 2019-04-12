@@ -10,8 +10,7 @@
 	if(!module)
 		module = new /obj/item/circuitboard/robot_module/drone(src)
 
-	var/dat = "<HEAD><TITLE>Drone modules</TITLE></HEAD><BODY>\n"
-	dat += {"
+	var/dat = {"
 	<B>Activated Modules</B>
 	<BR>
 	Module 1: [module_state_1 ? "<A HREF=?src=\ref[src];mod=\ref[module_state_1]>[module_state_1]<A>" : "No Module"]<BR>
@@ -35,7 +34,7 @@
 		else
 			module_string += text("[O]: <A HREF=?src=\ref[src];act=\ref[O]>Activate</A><BR>")
 
-		if((istype(O,/obj/item) || istype(O,/obj/item/device)) && !(istype(O,/obj/item/stack/cable_coil)))
+		if((istype(O,/obj/item) || istype(O,/obj/item)) && !(istype(O,/obj/item/stack/cable_coil)))
 			tools += module_string
 		else
 			resources += module_string
@@ -44,7 +43,10 @@
 
 	dat += resources
 
-	src << browse(dat, "window=robotmod")
+	var/datum/browser/popup = new(src, "robotmod", "<div align='center'>Drone modules</div>")
+	popup.set_content(dat)
+	popup.open(FALSE)
+
 
 //Putting the decompiler here to avoid doing list checks every tick.
 /mob/living/silicon/robot/drone/use_power()

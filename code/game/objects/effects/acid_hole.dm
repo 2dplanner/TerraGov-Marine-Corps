@@ -4,21 +4,21 @@
 	icon = 'icons/effects/new_acid.dmi'
 	icon_state = "hole_0"
 	anchored = 1
-	unacidable = TRUE
+	resistance_flags = UNACIDABLE|INDESTRUCTIBLE
 	layer = LOWER_ITEM_LAYER
 	var/turf/closed/wall/holed_wall
 
 /obj/effect/acid_hole/New(loc)
 	..()
-	if(istype(loc, /turf/closed/wall))
+	if(iswallturf(loc))
 		var/turf/closed/wall/W = loc
 		W.acided_hole = src
 		holed_wall = W
 		holed_wall.opacity = 0
 		if(W.junctiontype & (NORTH|SOUTH))
-			dir = EAST
+			setDir(EAST)
 		if(W.junctiontype & (EAST|WEST))
-			dir = SOUTH
+			setDir(SOUTH)
 
 
 /obj/effect/acid_hole/Destroy()
@@ -28,8 +28,6 @@
 		holed_wall = null
 	. = ..()
 
-/obj/effect/acid_hole/ex_act(severity)
-	return
 
 /obj/effect/acid_hole/fire_act()
 	return
@@ -39,7 +37,7 @@
 	if (!holed_wall)
 		return
 
-	if(M == user && isXeno(user))
+	if(M == user && isxeno(user))
 		use_wall_hole(user)
 
 
@@ -59,7 +57,7 @@
 
 /obj/effect/acid_hole/proc/use_wall_hole(mob/user)
 
-	if(user.mob_size == MOB_SIZE_BIG || user.is_mob_incapacitated() || user.lying || user.buckled || user.anchored)
+	if(user.mob_size == MOB_SIZE_BIG || user.incapacitated() || user.lying || user.buckled || user.anchored)
 		return
 
 	var/mob_dir = get_dir(user, src)
@@ -93,7 +91,7 @@
 	to_chat(user, "<span class='notice'>You start crawling through the hole.</span>")
 
 	if(do_after(user, 15, FALSE, 5, BUSY_ICON_GENERIC))
-		if(!user.is_mob_incapacitated() && !user.lying && !user.buckled)
+		if(!user.incapacitated() && !user.lying && !user.buckled)
 			if (T.density)
 				return
 			for(var/obj/O in T)
@@ -134,15 +132,15 @@
 								 "<span class='warning'>You throw [G] through [src]</span>")
 			user.drop_held_item()
 			G.forceMove(Target)
-			G.dir = pick(NORTH, SOUTH, EAST, WEST, NORTHEAST, NORTHWEST, SOUTHEAST, SOUTHWEST)
+			G.setDir(pick(NORTH, SOUTH, EAST, WEST, NORTHEAST, NORTHWEST, SOUTHEAST, SOUTHWEST))
 			step_away(G,src,rand(2,5))
 			if(!G.active)
 				G.activate(user)
 		return
 
 	//Throwing Flares and flashlights
-	else if(istype(W,/obj/item/device/flashlight))
-		var/obj/item/device/flashlight/F = W
+	else if(istype(W,/obj/item/flashlight))
+		var/obj/item/flashlight/F = W
 
 		if(!Target ||Target.density)
 			to_chat(user, "<span class='warning'>This hole leads nowhere!</span>")
@@ -156,7 +154,7 @@
 								 "<span class='warning'>You throw [F] through [src]</span>")
 			user.drop_held_item()
 			F.forceMove(Target)
-			F.dir = pick(NORTH, SOUTH, EAST, WEST, NORTHEAST, NORTHWEST, SOUTHEAST, SOUTHWEST)
+			F.setDir(pick(NORTH, SOUTH, EAST, WEST, NORTHEAST, NORTHWEST, SOUTHEAST, SOUTHWEST))
 			step_away(F,src,rand(1,5))
 			F.SetLuminosity(0)
 			if(F.on && loc != user)

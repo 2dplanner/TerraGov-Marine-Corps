@@ -71,7 +71,7 @@
 	req_access = list(ACCESS_MARINE_BRIDGE)
 
 	attack_hand(mob/user as mob)
-		if(stat & (BROKEN|NOPOWER))
+		if(machine_stat & (BROKEN|NOPOWER))
 			return
 		user.set_interaction(src)
 		var/dat = "<TITLE>Telecommunication Traffic Control</TITLE><center><b>Telecommunications Traffic Control</b></center>"
@@ -102,12 +102,6 @@
 				dat += "<center><a href='?src=\ref[src];operation=mainmenu'>\[Main Menu\]</a>     <a href='?src=\ref[src];operation=refresh'>\[Refresh\]</a></center>"
 				dat += "<br>Current Network: [network]"
 				dat += "<br>Selected Server: [SelectedServer.id]<br><br>"
-				dat += "<br><a href='?src=\ref[src];operation=editcode'>\[Edit Code\]</a>"
-				dat += "<br>Signal Execution: "
-				if(SelectedServer.autoruncode)
-					dat += "<a href='?src=\ref[src];operation=togglerun'>ALWAYS</a>"
-				else
-					dat += "<a href='?src=\ref[src];operation=togglerun'>NEVER</a>"
 
 
 		user << browse(dat, "window=traffic_control;size=575x400")
@@ -211,10 +205,10 @@
 		return
 
 	attackby(var/obj/item/D as obj, var/mob/user as mob)
-		if(istype(D, /obj/item/tool/screwdriver))
+		if(isscrewdriver(D))
 			playsound(src.loc, 'sound/items/Screwdriver.ogg', 25, 1)
 			if(do_after(user, 20, TRUE, 5, BUSY_ICON_BUILD))
-				if (src.stat & BROKEN)
+				if (src.machine_stat & BROKEN)
 					to_chat(user, "<span class='notice'>The broken glass falls out.</span>")
 					var/obj/structure/computerframe/A = new( src.loc )
 					new /obj/item/shard( src.loc )

@@ -26,7 +26,7 @@
 		var/obj/structure/razorwire/M = new/obj/item/stack/razorwire(user.loc, 1)
 		to_chat(user, "<span class='notice'>You combine the rods and barbed wire into [M]!</span>")
 
-	if (istype(W, /obj/item/tool/weldingtool))
+	if (iswelder(W))
 		var/obj/item/tool/weldingtool/WT = W
 
 		if(amount < 4)
@@ -68,18 +68,18 @@
 			else
 				return 1
 
-	else if(!in_use)
+	else if(!CHECK_BITFIELD(obj_flags, IN_USE))
 		if(amount < 4)
 			to_chat(user, "<span class='notice'>You need at least four rods to do this.</span>")
 			return
 		to_chat(usr, "<span class='notice'>Assembling grille...</span>")
-		in_use = 1
+		ENABLE_BITFIELD(obj_flags, IN_USE)
 		if (!do_after(usr, 20, TRUE, 5, BUSY_ICON_BUILD))
-			in_use = 0
+			DISABLE_BITFIELD(obj_flags, IN_USE)
 			return
 		var/obj/structure/grille/F = new /obj/structure/grille/ ( usr.loc )
 		to_chat(usr, "<span class='notice'>You assemble a grille</span>")
-		in_use = 0
+		DISABLE_BITFIELD(obj_flags, IN_USE)
 		F.add_fingerprint(usr)
 		use(4)
 	return

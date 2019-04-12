@@ -76,7 +76,7 @@
 
 /client/verb/swap_hand()
 	set hidden = 1
-	if(istype(mob, /mob/living/carbon))
+	if(iscarbon(mob))
 		mob:swap_hand()
 	if(istype(mob,/mob/living/silicon/robot))
 		var/mob/living/silicon/robot/R = mob
@@ -94,9 +94,9 @@
 
 /client/verb/toggle_throw_mode()
 	set hidden = 1
-	if(!istype(mob, /mob/living/carbon))
+	if(!iscarbon(mob))
 		return
-	if (!mob.stat && isturf(mob.loc) && !mob.is_mob_restrained())
+	if (!mob.stat && isturf(mob.loc) && !mob.restrained())
 		mob:toggle_throw_mode()
 	else
 		return
@@ -104,7 +104,7 @@
 
 /client/verb/drop_item()
 	set hidden = 1
-	if(!isrobot(mob))
+	if(!iscyborg(mob))
 		mob.drop_item_v()
 	return
 
@@ -124,7 +124,7 @@
 		if(mob.control_object.density)
 			step(mob.control_object,direct)
 			if(!mob.control_object)	return
-			mob.control_object.dir = direct
+			mob.control_object.setDir(direct)
 		else
 			mob.control_object.loc = get_step(mob.control_object,direct)
 	return
@@ -145,7 +145,7 @@
 		return
 
 	// There should be a var/is_zoomed in mob code not this mess
-	if(isXeno(mob))
+	if(isxeno(mob))
 		if(mob:is_zoomed)
 			mob:zoom_out()
 
@@ -154,13 +154,14 @@
 		for(var/obj/item/item in mob.contents)
 			if(item.zoom)
 				item.zoom(mob)
+				click_intercept = null
 				break
 
 	//Check if you are being grabbed and if so attemps to break it
 	if(mob.pulledby)
-		if(mob.is_mob_incapacitated(TRUE))
+		if(mob.incapacitated(TRUE))
 			return
-		else if(mob.is_mob_restrained(0))
+		else if(mob.restrained(0))
 			next_movement = world.time + 20 //to reduce the spam
 			to_chat(src, "<span class='warning'>You're restrained! You can't move!</span>")
 			return
@@ -195,9 +196,6 @@
 		else
 			. = ..()
 
-			if (mob.tile_contents)
-				mob.tile_contents = list()
-
 		moving = 0
 		next_movement = start_move_time + move_delay
 		return .
@@ -223,7 +221,7 @@
 	else
 		make_floating(1)
 
-	if(is_mob_restrained()) //Check to see if we can do things
+	if(restrained()) //Check to see if we can do things
 		return 0
 
 	//Check to see if we slipped

@@ -28,6 +28,7 @@
 
 
 /obj/structure/filingcabinet/Initialize()
+	. = ..()
 	for(var/obj/item/I in loc)
 		if(istype(I, /obj/item/paper) || istype(I, /obj/item/folder) || istype(I, /obj/item/photo) || istype(I, /obj/item/paper_bundle))
 			I.loc = src
@@ -41,7 +42,7 @@
 			sleep(5)
 			icon_state = initial(icon_state)
 			updateUsrDialog()
-	else if(istype(P, /obj/item/tool/wrench))
+	else if(iswrench(P))
 		playsound(loc, 'sound/items/Ratchet.ogg', 25, 1)
 		anchored = !anchored
 		to_chat(user, "<span class='notice'>You [anchored ? "wrench" : "unwrench"] \the [src].</span>")
@@ -104,9 +105,9 @@
 
 /obj/structure/filingcabinet/security/proc/populate()
 	if(virgin)
-		for(var/datum/data/record/G in data_core.general)
+		for(var/datum/data/record/G in GLOB.datacore.general)
 			var/datum/data/record/S
-			for(var/datum/data/record/R in data_core.security)
+			for(var/datum/data/record/R in GLOB.datacore.security)
 				if((R.fields["name"] == G.fields["name"] || R.fields["id"] == G.fields["id"]))
 					S = R
 					break
@@ -141,9 +142,9 @@
 
 /obj/structure/filingcabinet/medical/proc/populate()
 	if(virgin)
-		for(var/datum/data/record/G in data_core.general)
+		for(var/datum/data/record/G in GLOB.datacore.general)
 			var/datum/data/record/M
-			for(var/datum/data/record/R in data_core.medical)
+			for(var/datum/data/record/R in GLOB.datacore.medical)
 				if((R.fields["name"] == G.fields["name"] || R.fields["id"] == G.fields["id"]))
 					M = R
 					break

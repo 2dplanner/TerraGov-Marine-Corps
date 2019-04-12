@@ -34,20 +34,19 @@
 	user.set_interaction(src)
 	var/dat
 	if (src.temp)
-		dat = "<TT>[src.temp]</TT><BR><BR><A href='?src=\ref[src];temp=1'>Clear Screen</A>"
+		dat = "[src.temp]<BR><BR><A href='?src=\ref[src];temp=1'>Clear Screen</A>"
 	else
 		if(screen == 0)
-			dat += "<h3>Cyborg Control Console</h3><BR>"
 			dat += "<A href='?src=\ref[src];screen=1'>1. Cyborg Status</A><BR>"
 			dat += "<A href='?src=\ref[src];screen=2'>2. Emergency Full Destruct</A><BR>"
 		if(screen == 1)
-			for(var/mob/living/silicon/robot/R in mob_list)
-				if(istype(R, /mob/living/silicon/robot/drone))
+			for(var/mob/living/silicon/robot/R in GLOB.silicon_mobs)
+				if(ismaintdrone(R))
 					continue //There's a specific console for drones.
-				if(istype(user, /mob/living/silicon/ai))
+				if(isAI(user))
 					if (R.connected_ai != user)
 						continue
-				if(istype(user, /mob/living/silicon/robot))
+				if(iscyborg(user))
 					if (R != user)
 						continue
 				if(R.scrambledcodes)
@@ -73,9 +72,6 @@
 					dat += " Slaved to [R.connected_ai.name] |"
 				else
 					dat += " Independent from AI |"
-				if (istype(user, /mob/living/silicon))
-					if((user.mind.special_role && user.mind.original == user) && !R.emagged)
-						dat += "<A href='?src=\ref[src];magbot=\ref[R]'>(<font color=blue><i>Hack</i></font>)</A> "
 				dat += "<A href='?src=\ref[src];stopbot=\ref[R]'>(<font color=green><i>[R.canmove ? "Lockdown" : "Release"]</i></font>)</A> "
 				dat += "<A href='?src=\ref[src];killbot=\ref[R]'>(<font color=red><i>Destroy</i></font>)</A>"
 				dat += "<BR>"
@@ -98,14 +94,15 @@
 				\n<A href='?src=\ref[user];mach_close=computer'>Close</A>"}
 			dat += "<A href='?src=\ref[src];screen=0'>(Return to Main Menu)</A><BR>"
 
-	user << browse(dat, "window=computer;size=400x500")
+	var/datum/browser/popup = new(user, "computer", "<div align='center'>Cyborg Control Console</div>", 400, 500)
+	popup.set_content(dat)
+	popup.open(FALSE)
 	onclose(user, "computer")
-	return
 
 /obj/machinery/computer/robotics/Topic(href, href_list)
 	if(..())
 		return
-	if ((usr.contents.Find(src) || (in_range(src, usr) && istype(src.loc, /turf))) || (istype(usr, /mob/living/silicon)))
+	if ((usr.contents.Find(src) || (in_range(src, usr) && istype(src.loc, /turf))) || (issilicon(usr)))
 		usr.set_interaction(src)
 
 		if (href_list["eject"])
@@ -115,14 +112,11 @@
 
 		else if (href_list["eject2"])
 			var/obj/item/card/id/I = usr.get_active_held_item()
-			if (istype(I, /obj/item/device/pda))
-				var/obj/item/device/pda/pda = I
-				I = pda.id
 			if (istype(I))
 				if(src.check_access(I))
 					if (!status)
-						message_admins("<span class='notice'> [key_name_admin(usr)] has initiated the global cyborg killswitch!</span>")
-						log_game("<span class='notice'> [key_name(usr)] has initiated the global cyborg killswitch!</span>")
+						log_game("[key_name(usr)] has initiated the global cyborg killswitch.")
+						message_admins("[ADMIN_TPMONTY(usr)] has initiated the global cyborg killswitch.")
 						src.status = 1
 						src.start_sequence()
 						src.temp = null
@@ -161,14 +155,9 @@
 					var/choice = input("Are you certain you wish to detonate [R.name]?") in list("Confirm", "Abort")
 					if(choice == "Confirm")
 						if(R && istype(R))
-							if(R.mind && R.mind.special_role && R.emagged)
-								to_chat(R, "Extreme danger.  Termination codes detected.  Scrambling security codes and automatic AI unlink triggered.")
-								R.ResetSecurityCodes()
-
-							else
-								message_admins("<span class='notice'> [key_name_admin(usr)] detonated [R.name]!</span>")
-								log_game("<span class='notice'> [key_name_admin(usr)] detonated [R.name]!</span>")
-								R.self_destruct()
+							message_admins("<span class='notice'> [key_name_admin(usr)] detonated [R.name]!</span>")
+							log_game("<span class='notice'> [key_name_admin(usr)] detonated [R.name]!</span>")
+							R.self_destruct()
 			else
 				to_chat(usr, "<span class='warning'> Access Denied.</span>")
 
@@ -194,22 +183,6 @@
 			else
 				to_chat(usr, "<span class='warning'> Access Denied.</span>")
 
-		else if (href_list["magbot"])
-			if(src.allowed(usr))
-				var/mob/living/silicon/robot/R = locate(href_list["magbot"])
-
-				// whatever weirdness this is supposed to be, but that is how the href gets added, so here it is again
-				if(istype(R) && istype(usr, /mob/living/silicon) && usr.mind.special_role && (usr.mind.original == usr) && !R.emagged)
-
-					var/choice = input("Are you certain you wish to hack [R.name]?") in list("Confirm", "Abort")
-					if(choice == "Confirm")
-						if(R && istype(R))
-//							message_admins("<span class='notice'> [key_name_admin(usr)] emagged [R.name] using robotic console!</span>")
-							log_game("[key_name(usr)] emagged [R.name] using robotic console!")
-							R.emagged = 1
-							if(R.mind.special_role)
-								R.verbs += /mob/living/silicon/robot/proc/ResetSecurityCodes
-
 		src.add_fingerprint(usr)
 	src.updateUsrDialog()
 	return
@@ -224,8 +197,8 @@
 		sleep(10)
 	while(src.timeleft)
 
-	for(var/mob/living/silicon/robot/R in mob_list)
-		if(!R.scrambledcodes && !istype(R, /mob/living/silicon/robot/drone))
+	for(var/mob/living/silicon/robot/R in GLOB.silicon_mobs)
+		if(!R.scrambledcodes && !ismaintdrone(R))
 			R.self_destruct()
 
 	return

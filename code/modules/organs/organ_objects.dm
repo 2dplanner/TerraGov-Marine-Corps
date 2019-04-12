@@ -16,7 +16,7 @@
 /obj/item/organ/attack_self(mob/user as mob)
 
 	// Convert it to an edible form, yum yum.
-	if(!robotic && user.a_intent == "help" && user.zone_selected == "mouth")
+	if(!robotic && user.a_intent == INTENT_HELP && user.zone_selected == "mouth")
 		bitten(user)
 		return
 
@@ -42,7 +42,7 @@
 		return
 
 	// Don't process if we're in a freezer, an MMI or a stasis bag. //TODO: ambient temperature?
-	if(istype(loc,/obj/item/device/mmi) || istype(loc,/obj/item/bodybag/cryobag) || istype(loc,/obj/structure/closet/crate/freezer))
+	if(istype(loc,/obj/item/mmi) || istype(loc,/obj/item/bodybag/cryobag) || istype(loc,/obj/structure/closet/crate/freezer))
 		return
 
 	if(fresh && prob(40))
@@ -158,7 +158,7 @@
 
 	if(organ_data.vital)
 		log_combat(user, target, "removed a vital organ ([src])", addition="(INTENT: [uppertext(user.a_intent)])")
-		msg_admin_attack("[key_name(usr)] (<A HREF='?_src_=holder;adminmoreinfo=\ref[usr]'>?</A>) (<A HREF='?_src_=holder;adminplayerobservecoodjump=1;X=[usr.x];Y=[usr.y];Z=[usr.z]'>JMP</a>) (<A HREF='?_src_=holder;adminplayerfollow=\ref[usr]'>FLW</a>) removed a vital organ ([src]) from [key_name(target)] (<A HREF='?_src_=holder;adminmoreinfo=\ref[target]'>?</A>) (<A HREF='?_src_=holder;adminplayerobservecoodjump=1;X=[target.x];Y=[target.y];Z=[target.z]'>JMP</a>) (<A HREF='?_src_=holder;adminplayerfollow=\ref[target]'>FLW</a>) (INTENT: [uppertext(user.a_intent)])")
+		msg_admin_attack("[ADMIN_TPMONTY(usr)] removed a vital organ ([src]) from [ADMIN_TPMONTY(target)].")
 		target.death()
 
 /obj/item/organ/appendix/removed(var/mob/living/target,var/mob/living/user)

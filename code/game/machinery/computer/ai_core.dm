@@ -7,19 +7,19 @@
 	var/state = 0
 	var/datum/ai_laws/laws = new /datum/ai_laws/nanotrasen
 	var/obj/item/circuitboard/aicore/circuit = null
-	var/obj/item/device/mmi/brain = null
+	var/obj/item/mmi/brain = null
 
 
 /obj/structure/AIcore/attackby(obj/item/P as obj, mob/user as mob)
 	switch(state)
 		if(0)
-			if(istype(P, /obj/item/tool/wrench))
+			if(iswrench(P))
 				playsound(loc, 'sound/items/Ratchet.ogg', 25, 1)
 				if(do_after(user, 20, TRUE, 5, BUSY_ICON_BUILD))
 					to_chat(user, "<span class='notice'> You wrench the frame into place.</span>")
 					anchored = 1
 					state = 1
-			if(istype(P, /obj/item/tool/weldingtool))
+			if(iswelder(P))
 				var/obj/item/tool/weldingtool/WT = P
 				if(!WT.isOn())
 					to_chat(user, "The welder must be on for this task.")
@@ -31,7 +31,7 @@
 					new /obj/item/stack/sheet/plasteel( loc, 4)
 					qdel(src)
 		if(1)
-			if(istype(P, /obj/item/tool/wrench))
+			if(iswrench(P))
 				playsound(loc, 'sound/items/Ratchet.ogg', 25, 1)
 				if(do_after(user, 20, TRUE, 5, BUSY_ICON_BUILD))
 					to_chat(user, "<span class='notice'> You unfasten the frame.</span>")
@@ -44,12 +44,12 @@
 					icon_state = "1"
 					circuit = P
 					P.forceMove(src)
-			if(istype(P, /obj/item/tool/screwdriver) && circuit)
+			if(isscrewdriver(P) && circuit)
 				playsound(loc, 'sound/items/Screwdriver.ogg', 25, 1)
 				to_chat(user, "<span class='notice'> You screw the circuit board into place.</span>")
 				state = 2
 				icon_state = "2"
-			if(istype(P, /obj/item/tool/crowbar) && circuit)
+			if(iscrowbar(P) && circuit)
 				playsound(loc, 'sound/items/Crowbar.ogg', 25, 1)
 				to_chat(user, "<span class='notice'> You remove the circuit board.</span>")
 				state = 1
@@ -57,12 +57,12 @@
 				circuit.loc = loc
 				circuit = null
 		if(2)
-			if(istype(P, /obj/item/tool/screwdriver) && circuit)
+			if(isscrewdriver(P) && circuit)
 				playsound(loc, 'sound/items/Screwdriver.ogg', 25, 1)
 				to_chat(user, "<span class='notice'> You unfasten the circuit board.</span>")
 				state = 1
 				icon_state = "1"
-			if(istype(P, /obj/item/stack/cable_coil))
+			if(iscablecoil(P))
 				var/obj/item/stack/cable_coil/C = P
 				if (C.get_amount() < 5)
 					to_chat(user, "<span class='warning'>You need five coils of wire to add them to the frame.</span>")
@@ -76,7 +76,7 @@
 						to_chat(user, "<span class='notice'>You add cables to the frame.</span>")
 				return
 		if(3)
-			if(istype(P, /obj/item/tool/wirecutters))
+			if(iswirecutter(P))
 				if (brain)
 					to_chat(user, "Get that brain out of there first")
 				else
@@ -123,16 +123,12 @@
 				laws.add_inherent_law(M.newFreeFormLaw)
 				to_chat(usr, "Added a freeform law.")
 
-			if(istype(P, /obj/item/device/mmi))
+			if(istype(P, /obj/item/mmi))
 				if(!P:brainmob)
 					to_chat(user, "<span class='warning'> Sticking an empty [P] into the frame would sort of defeat the purpose.</span>")
 					return
 				if(P:brainmob.stat == 2)
 					to_chat(user, "<span class='warning'> Sticking a dead [P] into the frame would sort of defeat the purpose.</span>")
-					return
-
-				if(jobban_isbanned(P:brainmob, "AI"))
-					to_chat(user, "<span class='warning'> This [P] does not seem to fit.</span>")
 					return
 
 				if(user.drop_held_item())
@@ -141,7 +137,7 @@
 					to_chat(usr, "Added [P].")
 					icon_state = "3b"
 
-			if(istype(P, /obj/item/tool/crowbar) && brain)
+			if(iscrowbar(P) && brain)
 				playsound(loc, 'sound/items/Crowbar.ogg', 25, 1)
 				to_chat(user, "<span class='notice'> You remove the brain.</span>")
 				brain.loc = loc
@@ -149,7 +145,7 @@
 				icon_state = "3"
 
 		if(4)
-			if(istype(P, /obj/item/tool/crowbar))
+			if(iscrowbar(P))
 				playsound(loc, 'sound/items/Crowbar.ogg', 25, 1)
 				to_chat(user, "<span class='notice'> You remove the glass panel.</span>")
 				state = 3
@@ -160,13 +156,12 @@
 				new /obj/item/stack/sheet/glass/reinforced( loc, 2 )
 				return
 
-			if(istype(P, /obj/item/tool/screwdriver))
+			if(isscrewdriver(P))
 				playsound(loc, 'sound/items/Screwdriver.ogg', 25, 1)
 				to_chat(user, "<span class='notice'> You connect the monitor.</span>")
 				var/mob/living/silicon/ai/A = new /mob/living/silicon/ai ( loc, laws, brain )
 				if(A) //if there's no brain, the mob is deleted and a structure/AIcore is created
 					A.rename_self("ai", 1)
-				feedback_inc("cyborg_ais_created",1)
 				qdel(src)
 
 /obj/structure/AIcore/deactivated
@@ -176,8 +171,8 @@
 	anchored = 1
 	state = 20//So it doesn't interact based on the above. Not really necessary.
 
-	attackby(var/obj/item/device/aicard/A as obj, var/mob/user as mob)
-		if(istype(A, /obj/item/device/aicard))//Is it?
+	attackby(var/obj/item/aicard/A as obj, var/mob/user as mob)
+		if(istype(A, /obj/item/aicard))//Is it?
 			A.transfer_ai("INACTIVE","AICARD",src,user)
 		return
 
@@ -194,7 +189,7 @@ That prevents a few funky behaviors.
 				var/mob/living/silicon/ai/T = target
 				switch(interaction)
 					if("AICARD")
-						var/obj/item/device/aicard/C = src
+						var/obj/item/aicard/C = src
 						if(C.contents.len)//If there is an AI on card.
 							to_chat(U, "<span class='danger'>Transfer failed: Existing AI found on this terminal. Remove existing AI to install a new one.</span>")
 						else
@@ -215,7 +210,7 @@ That prevents a few funky behaviors.
 				var/obj/structure/AIcore/deactivated/T = target
 				switch(interaction)
 					if("AICARD")
-						var/obj/item/device/aicard/C = src
+						var/obj/item/aicard/C = src
 						var/mob/living/silicon/ai/A = locate() in C//I love locate(). Best proc ever.
 						if(A)//If AI exists on the card. Else nothing since both are empty.
 							A.control_disabled = 0
@@ -232,7 +227,7 @@ That prevents a few funky behaviors.
 				var/obj/machinery/computer/aifixer/T = target
 				switch(interaction)
 					if("AICARD")
-						var/obj/item/device/aicard/C = src
+						var/obj/item/aicard/C = src
 						if(!T.contents.len)
 							if (!C.contents.len)
 								to_chat(U, "No AI to copy over!")

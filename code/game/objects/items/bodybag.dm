@@ -20,11 +20,18 @@
 			deploy_bodybag(user, T)
 
 /obj/item/bodybag/proc/deploy_bodybag(mob/user, atom/location)
+	if(!isturf(user.loc))
+		return FALSE
+	for(var/obj/O in location)
+		if(istype(O, /obj/structure/closet) || O.density)
+			to_chat(user, "<span class='warning'>\the [src] can't be deployed here.</span>")
+			return FALSE
 	var/obj/structure/closet/bodybag/R = new unfolded_path(location, src)
 	R.add_fingerprint(user)
 	R.open(user)
 	user.temporarilyRemoveItemFromInventory(src)
 	qdel(src)
+	return TRUE
 
 
 /obj/item/bodybag/cryobag
@@ -46,16 +53,8 @@
 	desc = "This box contains body bags."
 	icon_state = "bodybags"
 	w_class = 3
-/obj/item/storage/box/bodybags/New()
-	..()
-	new /obj/item/bodybag(src)
-	new /obj/item/bodybag(src)
-	new /obj/item/bodybag(src)
-	new /obj/item/bodybag(src)
-	new /obj/item/bodybag(src)
-	new /obj/item/bodybag(src)
-	new /obj/item/bodybag(src)
-
+	spawn_type = /obj/item/bodybag
+	spawn_number = 7
 
 /obj/structure/closet/bodybag
 	name = "body bag"
@@ -100,7 +99,7 @@
 			src.name = "body bag"
 	//..() //Doesn't need to run the parent. Since when can fucking bodybags be welded shut? -Agouri
 		return
-	else if(istype(W, /obj/item/tool/wirecutters))
+	else if(iswirecutter(W))
 		to_chat(user, "<span class='notice'>You cut the tag off the bodybag.</span>")
 		src.name = "body bag"
 		src.overlays.Cut()
@@ -119,7 +118,7 @@
 			dead_mobs += M
 			continue
 		var/mob/living/carbon/human/H = M
-		if(H.check_tod() || isSynth(H)) // revivable
+		if(H.check_tod() || issynth(H)) // revivable
 			if(H.is_revivable() && H.get_ghost()) // definitely revivable
 				continue
 		dead_mobs += M
@@ -203,12 +202,12 @@
 		used = CB.used
 
 /obj/structure/closet/bodybag/cryobag/attackby(obj/item/I, mob/living/user)
-	if(!istype(I, /obj/item/device/healthanalyzer))
+	if(!istype(I, /obj/item/healthanalyzer))
 		return
 	if(!stasis_mob)
 		to_chat(user, "<span class='warning'>The stasis bag is empty!</span>")
 		return
-	var/obj/item/device/healthanalyzer/J = I
+	var/obj/item/healthanalyzer/J = I
 	J.attack(stasis_mob, user) // yes this is awful -spookydonut
 	return
 
@@ -287,7 +286,7 @@
 		if(ishuman(stasis_mob))
 			if(hasHUD(user,"medical"))
 				var/mob/living/carbon/human/H = stasis_mob
-				for(var/datum/data/record/R in data_core.medical)
+				for(var/datum/data/record/R in GLOB.datacore.medical)
 					if (R.fields["name"] == H.real_name)
 						if(!(R.fields["last_scan_time"]))
 							to_chat(user, "<span class = 'deptradio'>No scan report on record</span>\n")
@@ -310,7 +309,7 @@
 				return
 			if(ishuman(stasis_mob))
 				var/mob/living/carbon/human/H = stasis_mob
-				for(var/datum/data/record/R in data_core.medical)
+				for(var/datum/data/record/R in GLOB.datacore.medical)
 					if (R.fields["name"] == H.real_name)
 						if(R.fields["last_scan_time"] && R.fields["last_scan_result"])
 							usr << browse(R.fields["last_scan_result"], "window=scanresults;size=430x600")

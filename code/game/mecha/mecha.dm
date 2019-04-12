@@ -13,7 +13,7 @@
 	density = TRUE //Dense. To raise the heat.
 	opacity = TRUE ///opaque. Menacing.
 	anchored = TRUE //no pulling around.
-	unacidable = TRUE //and no deleting hoomans inside
+	resistance_flags = UNACIDABLE
 	layer = LYING_MOB_LAYER //so ejected occupant lying down don't appear behind the mech
 	infra_luminosity = 15 //byond implementation is bugged.
 	var/initial_icon = null //Mech type for resetting icon. Only used for reskinning kits (see custom items)
@@ -43,9 +43,9 @@
 	var/internal_tank_valve = ONE_ATMOSPHERE
 	var/obj/machinery/portable_atmospherics/canister/internal_tank
 
-	var/obj/machinery/atmospherics/portables_connector/connected_port = null
+	var/obj/machinery/atmospherics/components/unary/portables_connector/connected_port = null
 
-	var/obj/item/device/radio/radio = null
+	var/obj/item/radio/radio = null
 
 	var/max_temperature = 25000
 	var/internal_damage_threshold = 50 //health percentage below which internal damage is possible
@@ -81,17 +81,12 @@
 	removeVerb(/atom/movable/verb/pull)
 	log_message("[src.name] created.")
 	loc.Entered(src)
-	mechas_list += src //global mech list
+	GLOB.mechas_list += src //global mech list
 	return
 
 /obj/mecha/Destroy()
 	go_out()
-	mechas_list -= src //global mech list
-	SetLuminosity(0)
-
-/obj/mecha/Destroy()
-	go_out()
-	mechas_list -= src //global mech list
+	GLOB.mechas_list -= src //global mech list
 	SetLuminosity(0)
 	if(cell)
 		qdel(cell)
@@ -127,7 +122,7 @@
 	verbs += verb_path
 
 /obj/mecha/proc/add_airtank()
-	internal_tank = new /obj/machinery/portable_atmospherics/canister/air(src)
+	internal_tank = new /obj/machinery/portable_atmospherics/canister(src)
 	return internal_tank
 
 /obj/mecha/proc/add_cell(var/obj/item/cell/C=null)
@@ -194,7 +189,7 @@
 	if(equipment && equipment.len)
 		to_chat(user, "It's equipped with:")
 		for(var/obj/item/mecha_parts/mecha_equipment/ME in equipment)
-			to_chat(user, "\icon[ME] [ME]")
+			to_chat(user, "[icon2html(ME, user)] [ME]")
 
 
 /obj/mecha/proc/drop_item()//Derpfix, but may be useful in future for engineering exosuits.
@@ -290,7 +285,7 @@
 	if(move_result)
 		can_move = FALSE
 		use_power(step_energy_drain)
-		if(istype(src.loc, /turf/open/space))
+		if(isspaceturf(loc))
 			if(!src.check_for_support())
 				src.pr_inertial_movement.start(list(src,direction))
 				src.log_message("Movement control lost. Inertial movement started.")
@@ -300,7 +295,7 @@
 	return FALSE
 
 /obj/mecha/proc/mechturn(direction)
-	dir = direction
+	setDir(direction)
 	pick(playsound(src.loc, 'sound/mecha/powerloader_turn.ogg', 25, 1), playsound(src.loc, 'sound/mecha/powerloader_turn2.ogg', 25, 1))
 	return TRUE
 
@@ -482,7 +477,7 @@
 		src.occupant_message("<span class='notice'> The [A] bounces off the armor.</span>")
 		src.visible_message("The [A] bounces off the [src.name] armor")
 		src.log_append_to_last("Armor saved.")
-		if(istype(A, /mob/living))
+		if(isliving(A))
 			var/mob/living/M = A
 			M.take_limb_damage(10)
 	else if(istype(A, /obj))
@@ -620,7 +615,7 @@
 /obj/mecha/attackby(obj/item/W as obj, mob/user as mob)
 
 
-	if(istype(W, /obj/item/device/mmi))
+	if(istype(W, /obj/item/mmi))
 		if(mmi_move_inside(W,user))
 			to_chat(user, "[src]-MMI interface initialized successfuly")
 		else
@@ -637,22 +632,19 @@
 			else
 				to_chat(user, "You were unable to attach [W] to [src]")
 		return
-	if(istype(W, /obj/item/card/id)||istype(W, /obj/item/device/pda))
+	if(istype(W, /obj/item/card/id))
 		if(add_req_access || maint_access)
 			if(internals_access_allowed(usr))
 				var/obj/item/card/id/id_card
 				if(istype(W, /obj/item/card/id))
 					id_card = W
-				else
-					var/obj/item/device/pda/pda = W
-					id_card = pda.id
 				output_maintenance_dialog(id_card, user)
 				return
 			else
 				to_chat(user, "<span class='warning'>Invalid ID: Access denied.</span>")
 		else
 			to_chat(user, "<span class='warning'>Maintenance protocols disabled by operator.</span>")
-	else if(istype(W, /obj/item/tool/wrench))
+	else if(iswrench(W))
 		if(state==1)
 			state = 2
 			to_chat(user, "You undo the securing bolts.")
@@ -660,7 +652,7 @@
 			state = 1
 			to_chat(user, "You tighten the securing bolts.")
 		return
-	else if(istype(W, /obj/item/tool/crowbar))
+	else if(iscrowbar(W))
 		if(state==2)
 			state = 3
 			to_chat(user, "You open the hatch to the power unit")
@@ -668,7 +660,7 @@
 			state=2
 			to_chat(user, "You close the hatch to the power unit")
 		return
-	else if(istype(W, /obj/item/stack/cable_coil))
+	else if(iscablecoil(W))
 		if(state == 3 && hasInternalDamage(MECHA_INT_SHORT_CIRCUIT))
 			var/obj/item/stack/cable_coil/CC = W
 			if(CC.use(2))
@@ -677,7 +669,7 @@
 			else
 				to_chat(user, "There's not enough wire to finish the task.")
 		return
-	else if(istype(W, /obj/item/tool/screwdriver))
+	else if(isscrewdriver(W))
 		if(state==3 && src.cell)
 			src.cell.forceMove(src.loc)
 			src.cell = null
@@ -701,7 +693,7 @@
 				to_chat(user, "There's already a powercell installed.")
 		return
 
-	else if(istype(W, /obj/item/tool/weldingtool) && user.a_intent != "hurt")
+	else if(iswelder(W) && user.a_intent != INTENT_HARM)
 		var/obj/item/tool/weldingtool/WT = W
 		if (!WT.remove_fuel(0,user))
 			return
@@ -726,7 +718,7 @@
 
 /*
 /obj/mecha/attack_ai(var/mob/living/silicon/ai/user as mob)
-	if(!istype(user, /mob/living/silicon/ai))
+	if(!isAI(user))
 		return
 	var/output = {"<b>Assume direct control over [src]?</b>
 						<a href='?src=\ref[src];ai_take_control=\ref[user];duration=3000'>Yes</a><br>
@@ -775,7 +767,7 @@
 			. = T.return_temperature()
 
 
-/obj/mecha/proc/connect(obj/machinery/atmospherics/portables_connector/new_port)
+/obj/mecha/proc/connect(obj/machinery/atmospherics/components/unary/portables_connector/new_port)
 	//Make sure not already connected to something else
 	if(connected_port || !new_port || new_port.connected_device)
 		return 0
@@ -814,7 +806,7 @@
 	if(!src.occupant) return
 	if(usr!=src.occupant)
 		return
-	var/obj/machinery/atmospherics/portables_connector/possible_port = locate(/obj/machinery/atmospherics/portables_connector/) in loc
+	var/obj/machinery/atmospherics/components/unary/portables_connector/possible_port = locate(/obj/machinery/atmospherics/components/unary/portables_connector/) in loc
 	if(possible_port)
 		if(connect(possible_port))
 			src.occupant_message("<span class='notice'> [name] connects to the port.</span>")
@@ -965,7 +957,7 @@
 		src.forceMove(src.loc)
 		src.log_append_to_last("[H] moved in as pilot.")
 		src.icon_state = src.reset_icon()
-		dir = dir_in
+		setDir(dir_in)
 		playsound(src, 'sound/machines/windowdoor.ogg', 25, 1)
 		if(!hasInternalDamage())
 			src.occupant << sound('sound/mecha/nominal.ogg',volume = 50)
@@ -973,7 +965,7 @@
 	else
 		return 0
 
-/obj/mecha/proc/mmi_move_inside(var/obj/item/device/mmi/mmi_as_oc as obj,mob/user as mob)
+/obj/mecha/proc/mmi_move_inside(var/obj/item/mmi/mmi_as_oc as obj,mob/user as mob)
 	if(!mmi_as_oc.brainmob || !mmi_as_oc.brainmob.client)
 		to_chat(user, "Consciousness matrix not detected.")
 		return 0
@@ -1000,7 +992,7 @@
 		to_chat(user, "You stop inserting the MMI.")
 	return 0
 
-/obj/mecha/proc/mmi_moved_inside(var/obj/item/device/mmi/mmi_as_oc as obj,mob/user as mob)
+/obj/mecha/proc/mmi_moved_inside(var/obj/item/mmi/mmi_as_oc as obj,mob/user as mob)
 	if(mmi_as_oc && user in range(1))
 		if(!mmi_as_oc.brainmob || !mmi_as_oc.brainmob.client)
 			to_chat(user, "Consciousness matrix not detected.")
@@ -1024,7 +1016,7 @@
 		src.Entered(mmi_as_oc)
 		src.Move(src.loc)
 		src.icon_state = src.reset_icon()
-		dir = dir_in
+		setDir(dir_in)
 		src.log_message("[mmi_as_oc] moved in as pilot.")
 		if(!hasInternalDamage())
 			src.occupant << sound('sound/mecha/nominal.ogg',volume=50)
@@ -1069,7 +1061,7 @@
 	var/atom/movable/mob_container
 	if(ishuman(occupant))
 		mob_container = src.occupant
-	else if(istype(occupant, /mob/living/brain))
+	else if(isbrain(occupant))
 		var/mob/living/brain/brain = occupant
 		mob_container = brain.container
 	else
@@ -1084,8 +1076,8 @@
 			src.occupant.client.perspective = MOB_PERSPECTIVE
 		*/
 		src.occupant << browse(null, "window=exosuit")
-		if(istype(mob_container, /obj/item/device/mmi))
-			var/obj/item/device/mmi/mmi = mob_container
+		if(istype(mob_container, /obj/item/mmi))
+			var/obj/item/mmi/mmi = mob_container
 			if(mmi.brainmob)
 				occupant.loc = mmi
 			mmi.mecha = null
@@ -1093,7 +1085,7 @@
 			src.verbs += /obj/mecha/verb/eject
 		src.occupant = null
 		src.icon_state = src.reset_icon()+"-open"
-		src.dir = dir_in
+		setDir(dir_in)
 	return
 
 /////////////////////////
@@ -1119,9 +1111,6 @@
 		return 1
 	if(!access_list.len) //no requirements
 		return 1
-	if(istype(I, /obj/item/device/pda))
-		var/obj/item/device/pda/pda = I
-		I = pda.id
 	if(!istype(I) || !I.access) //not ID or no access
 		return 0
 	if(access_list==src.operation_req_access)
@@ -1156,7 +1145,7 @@
 						<script language='javascript' type='text/javascript'>
 						[js_byjax]
 						[js_dropdowns]
-						function ticker() {
+						function SSticker() {
 						    setInterval(function(){
 						        window.location='byond://?src=\ref[src]&update_content=1';
 						    }, 1000);
@@ -1164,7 +1153,7 @@
 
 						window.onload = function() {
 							dropdowns();
-							ticker();
+							SSticker();
 						}
 						</script>
 						</head>
@@ -1286,7 +1275,7 @@
 /obj/mecha/proc/get_log_html()
 	var/output = "<html><head><title>[src.name] Log</title></head><body style='font: 13px 'Courier', monospace;'>"
 	for(var/list/entry in log)
-		output += {"<div style='font-weight: bold;'>[time2text(entry["time"],"DDD MMM DD hh:mm:ss")] [game_year]</div>
+		output += {"<div style='font-weight: bold;'>[time2text(entry["time"],"DDD MMM DD hh:mm:ss")] [GAME_YEAR]</div>
 						<div style='margin-left:15px; margin-bottom:10px;'>[entry["message"]]</div>
 						"}
 	output += "</body></html>"
@@ -1350,7 +1339,7 @@
 /obj/mecha/proc/occupant_message(message as text)
 	if(message)
 		if(occupant && occupant.client)
-			to_chat(occupant, "\icon[src] [message]")
+			to_chat(occupant, "[icon2html(src, occupant)] [message]")
 	return
 
 /obj/mecha/log_message(message as text, message_type=LOG_GAME, color=null)
@@ -1522,7 +1511,7 @@
 		return
 	if(href_list["dna_lock"])
 		if(usr != src.occupant)	return
-		if(istype(occupant, /mob/living/brain))
+		if(isbrain(occupant))
 			occupant_message("You are a brain. No.")
 			return
 		if(src.occupant)

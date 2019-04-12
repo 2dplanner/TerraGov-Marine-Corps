@@ -66,7 +66,7 @@
 		if(istype(E, /datum/stack_recipe))
 			var/datum/stack_recipe/R = E
 			var/max_multiplier = round(src.amount / R.req_amount)
-			var/title as text
+			var/title
 			var/can_build = 1
 			can_build = can_build && (max_multiplier > 0)
 			if(R.res_amount > 1)
@@ -96,7 +96,7 @@
 
 /obj/item/stack/Topic(href, href_list)
 	..()
-	if((usr.is_mob_restrained() || usr.stat || usr.get_active_held_item() != src))
+	if((usr.restrained() || usr.stat || usr.get_active_held_item() != src))
 		return
 
 	if(href_list["sublist"] && !href_list["make"])
@@ -135,7 +135,7 @@
 				if(R.one_per_turf == 2 && (O.flags_atom & ON_BORDER) && O.dir == usr.dir) //We check overlapping dir here. Doesn't have to be the same type
 					to_chat(usr, "<span class='warning'>There is already \a [O.name] in this direction!</span>")
 					return
-		if(R.on_floor && istype(usr.loc, /turf/open))
+		if(R.on_floor && isopenturf(usr.loc))
 			var/turf/open/OT = usr.loc
 			if(!OT.allow_construction)
 				to_chat(usr, "<span class='warning'>\The [R.title] must be constructed on a proper surface!</span>")
@@ -168,7 +168,7 @@
 		var/atom/O = new R.result_type(usr.loc)
 		usr.visible_message("<span class='notice'>[usr] assembles \a [O].</span>",
 		"<span class='notice'>You assemble \a [O].</span>")
-		O.dir = usr.dir
+		O.setDir(usr.dir)
 		if(R.max_res_amount > 1)
 			var/obj/item/stack/new_item = O
 			new_item.amount = R.res_amount * multiplier
@@ -195,20 +195,21 @@
 
 /obj/item/stack/proc/use(used)
 	if(used > amount) //If it's larger than what we have, no go.
-		return 0
+		return FALSE
 	amount -= used
 	if(amount <= 0)
 		if(usr && loc == usr)
 			usr.temporarilyRemoveItemFromInventory(src)
 		qdel(src)
-	return 1
+	update_icon()
+	return TRUE
 
 /obj/item/stack/proc/add(var/extra)
 	if(amount + extra > max_amount)
-		return 0
+		return FALSE
 	else
 		amount += extra
-	return 1
+	return TRUE
 
 /obj/item/stack/proc/get_amount()
 	return amount
@@ -249,7 +250,7 @@
 		if(S.stack_id == stack_id) //same stack type
 			if (S.amount >= max_amount)
 				return 1
-			var/to_transfer as num
+			var/to_transfer
 			if (user.get_inactive_held_item()==src)
 				to_transfer = 1
 			else

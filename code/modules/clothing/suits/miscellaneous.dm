@@ -46,7 +46,7 @@
 	item_state = "hgpirate"
 	flags_inv_hide = HIDEJUMPSUIT
 	flags_armor_protection = CHEST|GROIN|ARMS|LEGS
-	armor = list(melee = 60, bullet = 90, laser = 60, energy = 20, bomb = 25, bio = 10, rad = 10)
+	armor = list("melee" = 60, "bullet" = 90, "laser" = 60, "energy" = 20, "bomb" = 25, "bio" = 10, "rad" = 10, "fire" = 20, "acid" = 20)
 
 
 /obj/item/clothing/suit/cyborg_suit
@@ -57,13 +57,6 @@
 	flags_atom = CONDUCT
 	fire_resist = T0C+5200
 	flags_inv_hide = HIDEGLOVES|HIDESHOES|HIDEJUMPSUIT
-
-
-/obj/item/clothing/suit/greatcoat
-	name = "great coat"
-	desc = "A heavy great coat"
-	icon_state = "nazi"
-	item_state = "nazi"
 
 /obj/item/clothing/suit/johnny_coat
 	name = "johnny~~ coat"
@@ -111,7 +104,7 @@
 	item_state = "space_suit_syndicate"
 	desc = "A plastic replica of the syndicate space suit, you'll look just like a real murderous syndicate agent in this! This is a toy, it is not made for use in space!"
 	w_class = 3
-	allowed = list(/obj/item/device/flashlight,/obj/item/tank/emergency_oxygen,/obj/item/toy)
+	allowed = list(/obj/item/flashlight,/obj/item/tank/emergency_oxygen,/obj/item/toy)
 	flags_inv_hide = HIDEGLOVES|HIDESHOES|HIDEJUMPSUIT
 	flags_armor_protection = CHEST|GROIN|ARMS|HANDS|LEGS|FEET
 
@@ -171,7 +164,7 @@
 	flags_inv_hide = HIDEJUMPSUIT
 /* not currently needed thanks to Manzehino who provided a different jumpsuit sprite.
 /obj/item/clothing/suit/white_dress_jacket
-	name = "White Dress Jacket" 
+	name = "White Dress Jacket"
 	desc = "The perfect white jacket to go with your white dress uniform."
 	icon_state = "white_dress_jacket" //with thanks to Baystation12
 	item_state = "white_dress_jacket" //with thanks to Baystation12
@@ -182,8 +175,8 @@
 	icon_state = "officer_cloak" //with thanks to Baystation12
 	item_state = "officer_cloak" //with thanks to Baystation12
 
-/obj/item/clothing/suit/commander_cloak
-	name = "Commander's Cloak"
+/obj/item/clothing/suit/captain_cloak
+	name = "Captain's Cloak"
 	desc = "An opulant cloak detailed with your many accomplishments."
 	icon_state = "commander_cloak" //with thanks to Baystation12
 	item_state = "commander_cloak" //with thanks to Baystation12
@@ -194,8 +187,8 @@
 	icon_state = "officer_cloak_red" //with thanks to Baystation12
 	item_state = "officer_cloak_red" //with thanks to Baystation12
 
-/obj/item/clothing/suit/commander_cloak_red
-	name = "Commander's Cloak - Red"
+/obj/item/clothing/suit/captain_cloak_red
+	name = "Captain's Cloak - Red"
 	desc = "An opulant cloak detailed with your many accomplishments. with fancy red trim."
 	icon_state = "commander_cloak_red" //with thanks to Baystation12
 	item_state = "commander_cloak_red" //with thanks to Baystation12
@@ -233,7 +226,7 @@
 	set category = "Object"
 	set src in usr
 
-	if(!usr.canmove || usr.stat || usr.is_mob_restrained())
+	if(!usr.canmove || usr.stat || usr.restrained())
 		return 0
 
 	if(src.icon_state == "suitjacket_blue_open")

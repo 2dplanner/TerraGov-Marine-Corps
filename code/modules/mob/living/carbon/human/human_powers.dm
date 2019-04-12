@@ -9,7 +9,7 @@
 	if(last_special > world.time)
 		return
 
-	if(is_mob_incapacitated() || lying || buckled)
+	if(incapacitated() || lying || buckled)
 		to_chat(src, "You cannot tackle someone in your current state.")
 		return
 
@@ -28,7 +28,7 @@
 	if(last_special > world.time)
 		return
 
-	if(is_mob_incapacitated() || lying || buckled)
+	if(incapacitated() || lying || buckled)
 		to_chat(src, "You cannot tackle in your current state.")
 		return
 
@@ -57,7 +57,7 @@
 	if(last_special > world.time)
 		return
 
-	if(is_mob_incapacitated() || lying || buckled)
+	if(incapacitated() || lying || buckled)
 		to_chat(src, "You cannot leap in your current state.")
 		return
 
@@ -76,7 +76,7 @@
 	if(last_special > world.time)
 		return
 
-	if(is_mob_incapacitated() || lying || buckled)
+	if(incapacitated() || lying || buckled)
 		to_chat(src, "You cannot leap in your current state.")
 		return
 
@@ -97,11 +97,6 @@
 
 	T.KnockDown(5)
 
-	//Only official cool kids get the grab and no self-prone.
-	if(!(src.mind && src.mind.special_role))
-		src.KnockDown(5)
-		return
-
 	if(T == src || T.anchored)
 		return 0
 
@@ -115,7 +110,7 @@
 	if(last_special > world.time)
 		return
 
-	if(is_mob_incapacitated(TRUE) || lying)
+	if(incapacitated(TRUE) || lying)
 		to_chat(src, "<span class='warning'>You cannot do that in your current state.</span>")
 		return
 
@@ -149,12 +144,10 @@
 	set name = "Commune with creature"
 	set desc = "Send a telepathic message to an unlucky recipient."
 
-	var/list/targets = list()
 	var/target = null
 	var/text = null
 
-	targets += getmobs() //Fill list, prompt user with list
-	target = input("Select a creature!", "Speak to creature", null, null) as null|anything in targets
+	target = input("Select a creature!", "Speak to creature", null, null) as null|anything in GLOB.mob_list
 
 	if(!target) return
 
@@ -164,9 +157,9 @@
 
 	if(!text) return
 
-	var/mob/M = targets[target]
+	var/mob/M = target
 
-	if(istype(M, /mob/dead/observer) || M.stat == DEAD)
+	if(isobserver(M) || M.stat == DEAD)
 		to_chat(src, "Not even a [src.species.name] can speak to the dead.")
 		return
 
@@ -175,7 +168,7 @@
 	to_chat(M, "<span class='notice'>Like lead slabs crashing into the ocean, alien thoughts drop into your mind: [text]</span>")
 	if(istype(M,/mob/living/carbon/human))
 		var/mob/living/carbon/human/H = M
-		if(H.species.name == src.species.name)
+		if(is_species(H, species))
 			return
 		to_chat(H, "<span class='warning'>Your nose begins to bleed...</span>")
 		H.drip(1)

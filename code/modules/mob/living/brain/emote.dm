@@ -1,5 +1,5 @@
 /mob/living/brain/emote(var/act,var/m_type=1,var/message = null, player_caused)
-	if(!(container && istype(container, /obj/item/device/mmi)))//No MMI, no emotes
+	if(!(container && istype(container, /obj/item/mmi)))//No MMI, no emotes
 		return
 
 	if (findtext(act, "-", 1, null))
@@ -68,8 +68,8 @@
 	if (message)
 		log_message(message, LOG_EMOTE)
 
-		for(var/mob/M in dead_mob_list)
-			if (!M.client || istype(M, /mob/new_player))
+		for(var/mob/M in GLOB.dead_mob_list)
+			if (!M.client || isnewplayer(M))
 				continue //skip monkeys, leavers, and new_players
 			if(M.stat == DEAD && (M.client.prefs.toggles_chat & CHAT_GHOSTSIGHT) && !(M in viewers(src,null)))
 				M.show_message(message)

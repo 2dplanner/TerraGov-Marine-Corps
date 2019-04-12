@@ -10,41 +10,12 @@
 
 	return text
 
+
 //Sends resource files to client cache
 /client/proc/getFiles()
 	for(var/file in args)
 		src << browse_rsc(file)
 
-/client/proc/browse_files(root="data/logs/", max_iterations=10, list/valid_extensions=list("txt","log","htm", "html"))
-	var/path = root
-
-	for(var/i=0, i<max_iterations, i++)
-		var/list/choices = flist(path)
-		if(path != root)
-			choices.Insert(1,"/")
-
-		var/choice = input(src,"Choose a file to access:","Download",null) as null|anything in choices
-		switch(choice)
-			if(null)
-				return
-			if("/")
-				path = root
-				continue
-		path += choice
-
-		if(copytext(path,-1,0) != "/")		//didn't choose a directory, no need to iterate again
-			break
-	var/extensions
-	for(var/i in valid_extensions)
-		if(extensions)
-			extensions += "|"
-		extensions += "[i]"
-	var/regex/valid_ext = new("\\.([extensions])$", "i")
-	if( !fexists(path) || !(valid_ext.Find(path)) )
-		to_chat(src, "<font color='red'>Error: browse_files(): File not found/Invalid file([path]).</font>")
-		return
-
-	return path
 
 #define FTPDELAY 50	//50 tick delay to discourage spam
 /*	This proc is a failsafe to prevent spamming of file requests.
@@ -53,10 +24,10 @@
 
 	PLEASE USE RESPONSIBLY, Some log files canr each sizes of 4MB!	*/
 /client/proc/file_spam_check()
-	var/time_to_wait = fileaccess_timer - world.time
+	var/time_to_wait = GLOB.fileaccess_timer - world.time
 	if(time_to_wait > 0)
 		to_chat(src, "<font color='red'>Error: file_spam_check(): Spam. Please wait [round(time_to_wait/10)] seconds.</font>")
-		return 1
-	fileaccess_timer = world.time + FTPDELAY
-	return 0
+		return TRUE
+	GLOB.fileaccess_timer = world.time + FTPDELAY
+	return FALSE
 #undef FTPDELAY

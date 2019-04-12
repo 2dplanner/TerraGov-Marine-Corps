@@ -4,29 +4,22 @@
 	req_access = list(ACCESS_CIVILIAN_PUBLIC)
 	var/registered_name = null
 
-/obj/structure/closet/secure_closet/personal/New()
-	..()
-	spawn(2)
-		if(prob(50))
-			new /obj/item/storage/backpack(src)
-		else
-			new /obj/item/storage/backpack/satchel/norm(src)
-		new /obj/item/device/radio/headset( src )
-	return
-
+/obj/structure/closet/secure_closet/personal/Initialize()
+	. = ..()
+	if(prob(50))
+		new /obj/item/storage/backpack(src)
+	else
+		new /obj/item/storage/backpack/satchel/norm(src)
+	new /obj/item/radio/headset( src )
 
 /obj/structure/closet/secure_closet/personal/patient
 	name = "patient's closet"
 
-/obj/structure/closet/secure_closet/personal/patient/New()
-	..()
-	spawn(4)
-		contents = list()
-		new /obj/item/clothing/under/color/white( src )
-		new /obj/item/clothing/shoes/white( src )
-	return
-
-
+/obj/structure/closet/secure_closet/personal/patient/Initialize()
+	. = ..()
+	contents = list()
+	new /obj/item/clothing/under/color/white( src )
+	new /obj/item/clothing/shoes/white( src )
 
 /obj/structure/closet/secure_closet/personal/cabinet
 	icon_state = "cabinetdetective_locked"
@@ -48,13 +41,11 @@
 		else
 			icon_state = icon_opened
 
-/obj/structure/closet/secure_closet/personal/cabinet/New()
-	..()
-	spawn(4)
-		contents = list()
-		new /obj/item/storage/backpack/satchel( src )
-		new /obj/item/device/radio/headset( src )
-	return
+/obj/structure/closet/secure_closet/personal/cabinet/Initialize()
+	. = ..()
+	contents = list()
+	new /obj/item/storage/backpack/satchel( src )
+	new /obj/item/radio/headset( src )
 
 /obj/structure/closet/secure_closet/personal/attackby(obj/item/W as obj, mob/user as mob)
 	if (src.opened)
@@ -96,7 +87,7 @@
 	set src in oview(1) // One square distance
 	set category = "Object"
 	set name = "Reset Lock"
-	if(!usr.canmove || usr.stat || usr.is_mob_restrained()) // Don't use it if you're not able to! Checks for stuns, ghost and restrain
+	if(!usr.canmove || usr.stat || usr.restrained()) // Don't use it if you're not able to! Checks for stuns, ghost and restrain
 		return
 	if(ishuman(usr))
 		src.add_fingerprint(usr)

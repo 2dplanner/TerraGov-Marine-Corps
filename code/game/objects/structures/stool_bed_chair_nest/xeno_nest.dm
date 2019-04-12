@@ -7,8 +7,8 @@
 	icon_state = "nest"
 	buckling_y = 6
 	buildstacktype = null //can't be disassembled and doesn't drop anything when destroyed
-	unacidable = TRUE
-	var/health = 100
+	resistance_flags = UNACIDABLE
+	health = 100
 	var/on_fire = 0
 	var/resisting = 0
 	var/resisting_ready = 0
@@ -29,6 +29,7 @@
 		return TRUE
 	else
 		if(W.flags_item & NOBLUDGEON) return
+		user.changeNext_move(W.attack_speed)
 		var/aforce = W.force
 		health = max(0, health - aforce)
 		playsound(loc, "alien_resin_break", 25)
@@ -40,7 +41,7 @@
 	if(buckled_mob)
 		if(buckled_mob.buckled == src)
 			if(buckled_mob != user)
-				if(user.stat || user.lying || user.is_mob_restrained())
+				if(user.stat || user.lying || user.restrained())
 					return
 				buckled_mob.visible_message("<span class='notice'>\The [user] pulls \the [buckled_mob] free from \the [src]!</span>",\
 				"<span class='notice'>\The [user] pulls you free from \the [src].</span>",\
@@ -89,7 +90,7 @@
 
 /obj/structure/bed/nest/buckle_mob(mob/M as mob, mob/user as mob)
 
-	if(!ismob(M) || (get_dist(src, user) > 1) || (M.loc != loc) || user.is_mob_restrained() || user.stat || user.lying || M.buckled || !iscarbon(user))
+	if(!ismob(M) || (get_dist(src, user) > 1) || (M.loc != loc) || user.restrained() || user.stat || user.lying || M.buckled || !iscarbon(user))
 		return
 
 	if(buckled_mob)
@@ -100,12 +101,8 @@
 		to_chat(user, "<span class='warning'>\The [M] is too big to fit in [src].</span>")
 		return
 
-	if(!isXeno(user))
+	if(!isxeno(user))
 		to_chat(user, "<span class='warning'>Gross! You're not touching that stuff.</span>")
-		return
-
-	if(isYautja(M))
-		to_chat(user, "<span class='warning'>\The [M] seems to be wearing some kind of resin-resistant armor!</span>")
 		return
 
 	if(ishuman(M))
@@ -120,7 +117,7 @@
 	if(ishuman(M))
 		var/mob/living/carbon/human/H = M
 		if(!H.lying) //Don't ask me why is has to be
-			to_chat(user, "<span class='warning'>[M] is resisting, ground them.</span>")
+			to_chat(user, "<span class='warning'>[M] is resisting, ground [M.p_them()].</span>")
 			return
 
 	user.visible_message("<span class='warning'>[user] pins [M] into [src], preparing the securing resin.</span>",
@@ -134,7 +131,7 @@
 		if(ishuman(M)) //Improperly stunned Marines won't be nested
 			var/mob/living/carbon/human/H = M
 			if(!H.lying) //Don't ask me why is has to be
-				to_chat(user, "<span class='warning'>[M] is resisting, ground them.</span>")
+				to_chat(user, "<span class='warning'>[M] is resisting, ground [M.p_them()].</span>")
 				return
 		do_buckle(M, user)
 
@@ -184,14 +181,16 @@
 	healthcheck()
 
 /obj/structure/bed/nest/attack_alien(mob/living/carbon/Xenomorph/M)
-	if(isXenoLarva(M)) //Larvae can't do shit
+	if(isxenolarva(M)) //Larvae can't do shit
 		return
-	if(M.a_intent == "hurt")
+	if(M.a_intent == INTENT_HARM)
 		M.visible_message("<span class='danger'>\The [M] claws at \the [src]!</span>", \
 		"<span class='danger'>You claw at \the [src].</span>")
 		playsound(loc, "alien_resin_break", 25)
 		health -= (M.melee_damage_upper + 25) //Beef up the damage a bit
 		healthcheck()
+		if(M.stealth_router(HANDLE_STEALTH_CHECK)) //Cancel stealth if we have it due to aggro.
+			M.stealth_router(HANDLE_STEALTH_CODE_CANCEL)
 	else
 		attack_hand(M)
 

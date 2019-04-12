@@ -42,7 +42,7 @@
 	..()
 	usr.set_interaction(src)
 	if(href_list["remove"])
-		if((usr.stat || usr.is_mob_restrained()))	//For when a player is handcuffed while they have the notice window open
+		if((usr.stat || usr.restrained()))	//For when a player is handcuffed while they have the notice window open
 			return
 		var/obj/item/P = locate(href_list["remove"])
 		if((P && P.loc == src))
@@ -53,7 +53,7 @@
 			icon_state = "nboard0[notices]"
 
 	if(href_list["write"])
-		if((usr.stat || usr.is_mob_restrained())) //For when a player is handcuffed while they have the notice window open
+		if((usr.stat || usr.restrained())) //For when a player is handcuffed while they have the notice window open
 			return
 		var/obj/item/P = locate(href_list["write"])
 
@@ -71,7 +71,7 @@
 	if(href_list["read"])
 		var/obj/item/paper/P = locate(href_list["read"])
 		if((P && P.loc == src))
-			if(!( istype(usr, /mob/living/carbon/human) ))
+			if(!( ishuman(usr) ))
 				usr << browse("<HTML><HEAD><TITLE>[P.name]</TITLE></HEAD><BODY><TT>[stars(P.info)]</TT></BODY></HTML>", "window=[P.name]")
 				onclose(usr, "[P.name]")
 			else

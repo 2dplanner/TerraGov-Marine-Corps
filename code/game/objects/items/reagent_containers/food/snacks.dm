@@ -60,12 +60,12 @@
 		to_chat(M, "<span class='warning'>How do you expect to eat this with the package still on?</span>")
 		return FALSE
 
-	if(istype(M, /mob/living/carbon))
+	if(iscarbon(M))
 		var/fullness = M.nutrition + (M.reagents.get_reagent_amount("nutriment") * 25)
 		if(M == user)								//If you're eating it yourself
 			if(istype(M,/mob/living/carbon/human))
 				var/mob/living/carbon/human/H = M
-				if(H.species.flags & IS_SYNTHETIC)
+				if(H.species.species_flags & IS_SYNTHETIC)
 					to_chat(H, "<span class='warning'>You have a monitor for a head, where do you think you're going to put that?</span>")
 					return
 			if (fullness <= 50)
@@ -82,7 +82,7 @@
 		else
 			if(istype(M,/mob/living/carbon/human))
 				var/mob/living/carbon/human/H = M
-				if(H.species.flags & IS_SYNTHETIC)
+				if(H.species.species_flags & IS_SYNTHETIC)
 					to_chat(H, "<span class='warning'>They have a monitor for a head, where do you think you're going to put that?</span>")
 					return
 
@@ -1120,6 +1120,7 @@
 	desc = "A true prophecy in each cookie!"
 	icon_state = "fortune_cookie"
 	filling_color = "#E8E79E"
+	trash = /obj/item/trash/fortunecookie
 	list_reagents = list("nutriment" = 3)
 	bitesize = 2
 	tastes = list("cookie" = 1)
@@ -1135,7 +1136,7 @@
 /obj/item/reagent_container/food/snacks/meatsteak
 	name = "Meat steak"
 	desc = "A piece of hot spicy meat."
-	icon_state = "meatstake"
+	icon_state = "meatsteak"
 	trash = /obj/item/trash/plate
 	filling_color = "#7A3D11"
 	list_reagents = list("nutriment" = 4, "sodiumchloride" = 1, "blackpepper" = 1)
@@ -1299,12 +1300,12 @@
 	name = "Tele Bacon"
 	desc = "It tastes a little odd but it is still delicious."
 	icon_state = "bacon"
-	var/obj/item/device/radio/beacon/bacon/baconbeacon
+	var/obj/item/radio/beacon/bacon/baconbeacon
 	bitesize = 2
 	New()
 		..()
 		reagents.add_reagent("nutriment", 4)
-		baconbeacon = new /obj/item/device/radio/beacon/bacon(src)
+		baconbeacon = new /obj/item/radio/beacon/bacon(src)
 	On_Consume()
 		if(!reagents.total_volume)
 			baconbeacon.loc = usr
@@ -1340,7 +1341,7 @@
 /obj/item/reagent_container/food/snacks/monkeycube/On_Consume(var/mob/M)
 	to_chat(M, "<span class = 'warning'>Something inside of you suddently expands!</span>")
 
-	if (istype(M, /mob/living/carbon/human))
+	if (ishuman(M))
 		//Do not try to understand.
 		var/obj/item/surprise = new(M)
 		var/mob/ook = monkey_type
@@ -2158,7 +2159,7 @@
 /obj/item/reagent_container/food/snacks/sliceable/pizza/margherita
 	name = "Margherita"
 	desc = "The golden standard of pizzas."
-	icon_state = "pizzamargherita"
+	icon_state = "margheritapizza"
 	slice_path = /obj/item/reagent_container/food/snacks/margheritaslice
 	list_reagents = list("nutriment" = 40, "tomatojuice" = 6)
 	tastes = list("crust" = 1, "tomato" = 1, "cheese" = 1)
@@ -2166,7 +2167,7 @@
 /obj/item/reagent_container/food/snacks/margheritaslice
 	name = "Margherita slice"
 	desc = "A slice of the classic pizza."
-	icon_state = "pizzamargheritaslice"
+	icon_state = "margheritapizzaslice"
 	filling_color = "#BAA14C"
 	bitesize = 2
 	tastes = list("crust" = 1, "tomato" = 1, "cheese" = 1)
@@ -2790,15 +2791,15 @@
 	flavor = newflavor
 
 	switch(newflavor)
-		if("boneless pork ribs", "grilled chicken", "pizza square", "spaghetti", "chicken tenders", "red crayon")
+		if("boneless pork ribs", "grilled chicken", "pizza square", "spaghetti", "chicken tenders")
 			icon_state = "entree"
 			list_reagents = list("nutriment" = 5, "sodiumchloride" = 1)
-		if("meatballs", "cheese spread", "beef turnover", "mashed potatoes", "yellow crayon" )
+		if("meatballs", "cheese spread", "beef turnover", "mashed potatoes")
 			icon_state = "side"
 			list_reagents = list("nutriment" = 3, "sodiumchloride" = 1)
-		if("biscuit", "pretzels", "peanuts", "cracker", "purple crayon")
+		if("biscuit", "pretzels", "peanuts", "cracker")
 			icon_state = "snack"
 			list_reagents = list("nutriment" = 2, "sodiumchloride" = 1)
-		if("spiced apples", "chocolate brownie", "sugar cookie", "choco bar", "blue crayon")
+		if("spiced apples", "chocolate brownie", "sugar cookie", "choco bar", "crayon")
 			icon_state = "dessert"
 			list_reagents = list("nutriment" = 2, "sugar" = 1)

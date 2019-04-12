@@ -62,7 +62,7 @@
 	var/list/available_channels = list()
 
 	//Headset for Poly to yell at engineers :)
-	var/obj/item/device/radio/headset/ears = null
+	var/obj/item/radio/headset/ears = null
 
 	//The thing the parrot is currently interested in. This gets used for items the parrot wants to pick up, mobs it wants to steal from,
 	//mobs it wants to attack or mobs that have attacked it
@@ -85,7 +85,7 @@
 /mob/living/simple_animal/parrot/Initialize()
 	. = ..()
 	if(!ears)
-		var/headset = pick(	/obj/item/device/radio/headset)
+		var/headset = pick(	/obj/item/radio/headset)
 		ears = new headset(src)
 
 	parrot_sleep_dur = parrot_sleep_max //In case someone decides to change the max without changing the duration var
@@ -103,12 +103,14 @@
 	walk(src,0)
 	. = ..()
 
-/mob/living/simple_animal/parrot/Stat()
-	if (!..())
-		return 0
 
-	stat("Held Item", held_item)
-	return 1
+/mob/living/simple_animal/parrot/Stat()
+	. = ..()
+
+	if(statpanel("Stats"))
+		stat("Held Item", held_item)
+
+
 /*
  * Inventory
  */
@@ -129,11 +131,11 @@
 /mob/living/simple_animal/parrot/Topic(href, href_list)
 
 	//Can the usr physically do this?
-	if(!usr.canmove || usr.stat || usr.is_mob_restrained() || !in_range(loc, usr))
+	if(!usr.canmove || usr.stat || usr.restrained() || !in_range(loc, usr))
 		return
 
 	//Is the usr's mob type able to do this?
-	if(ishuman(usr) || ismonkey(usr) || isrobot(usr))
+	if(ishuman(usr) || ismonkey(usr) || iscyborg(usr))
 
 		//Removing from inventory
 		if(href_list["remove_inv"])
@@ -170,11 +172,11 @@
 						if(!item_to_add)
 							return
 
-						if( !istype(item_to_add,  /obj/item/device/radio/headset) )
+						if( !istype(item_to_add,  /obj/item/radio/headset) )
 							to_chat(usr, "<span class='warning'>This object won't fit.</span>")
 							return
 
-						var/obj/item/device/radio/headset/headset_to_add = item_to_add
+						var/obj/item/radio/headset/headset_to_add = item_to_add
 
 						usr.transferItemToLoc(headset_to_add, src)
 						ears = headset_to_add
@@ -211,7 +213,7 @@
 /mob/living/simple_animal/parrot/attack_hand(mob/living/carbon/M as mob)
 	..()
 	if(client) return
-	if(!stat && M.a_intent == "hurt")
+	if(!stat && M.a_intent == INTENT_HARM)
 
 		icon_state = "parrot_fly" //It is going to be flying regardless of whether it flees or attacks
 
@@ -695,7 +697,7 @@
 	speak = list("Poly wanna cracker!", ":e Check the singlo, you chucklefucks!",":e Wire the solars, you lazy bums!",":e WHO TOOK THE DAMN HARDSUITS?",":e OH GOD ITS FREE CALL THE SHUTTLE")
 
 /mob/living/simple_animal/parrot/Poly/Initialize()
-	ears = new /obj/item/device/radio/headset(src)
+	ears = new /obj/item/radio/headset(src)
 	available_channels = list(":e")
 	return ..()
 
@@ -726,7 +728,7 @@
 
 	if(message_mode)
 		if(message_mode in radiochannels)
-			if(ears && istype(ears,/obj/item/device/radio))
+			if(ears && istype(ears,/obj/item/radio))
 				ears.talk_into(src,message, message_mode, verb, null)
 
 

@@ -12,10 +12,10 @@
 	permeability_coefficient = 0.05
 	flags_cold_protection = HANDS
 	flags_heat_protection = HANDS
-	min_cold_protection_temperature = GLOVES_min_cold_protection_temperature
-	max_heat_protection_temperature = GLOVES_max_heat_protection_temperature
+	min_cold_protection_temperature = GLOVES_MIN_COLD_PROTECTION_TEMPERATURE
+	max_heat_protection_temperature = GLOVES_MAX_HEAT_PROTECTION_TEMPERATURE
 	flags_armor_protection = HANDS
-	armor = list(melee = 60, bullet = 40, laser = 10,energy = 10, bomb = 10, bio = 10, rad = 0)
+	armor = list("melee" = 60, "bullet" = 40, "laser" = 30, "energy" = 20, "bomb" = 30, "bio" = 10, "rad" = 10, "fire" = 20, "acid" = 20)
 
 /obj/item/clothing/gloves/marine/alpha
 	name = "alpha squad gloves"
@@ -81,8 +81,8 @@
 	siemens_coefficient = 0
 	permeability_coefficient = 0.01
 
-/obj/item/clothing/gloves/marine/techofficer/commander
-	name = "commander's gloves"
+/obj/item/clothing/gloves/marine/techofficer/captain
+	name = "captain's gloves"
 	desc = "You may like these gloves, but THEY think you are unworthy of them."
 	icon_state = "captain"
 	item_state = "egloves"
@@ -92,8 +92,8 @@
 	desc = "A pair of heavily armored gloves."
 	icon_state = "black"
 	item_state = "bgloves"
-	armor = list(melee = 80, bullet = 95, laser = 75, energy = 60, bomb = 45, bio = 15, rad = 15)
-	unacidable = 1
+	armor = list("melee" = 80, "bullet" = 95, "laser" = 80, "energy" = 80, "bomb" = 80, "bio" = 20, "rad" = 20, "fire" = 80, "acid" = 80)
+	resistance_flags = UNACIDABLE
 
 /obj/item/clothing/gloves/marine/veteran/PMC
 	name = "armored gloves"
@@ -101,12 +101,12 @@
 	icon_state = "black"
 	item_state = "bgloves"
 	siemens_coefficient = 0
-	armor = list(melee = 60, bullet = 60, laser = 35, energy = 20, bomb = 10, bio = 10, rad = 0)
+	armor = list("melee" = 60, "bullet" = 60, "laser" = 35, "energy" = 30, "bomb" = 30, "bio" = 15, "rad" = 15, "fire" = 30, "acid" = 30)
 
 /obj/item/clothing/gloves/marine/veteran/PMC/commando
 	name = "\improper PMC commando gloves"
 	desc = "A pair of heavily armored, insulated, acid-resistant gloves."
 	icon_state = "brown"
 	item_state = "browngloves"
-	armor = list(melee = 90, bullet = 120, laser = 100, energy = 90, bomb = 50, bio = 30, rad = 30)
-	unacidable = 1
+	armor = list("melee" = 90, "bullet" = 120, "laser" = 100, "energy" = 90, "bomb" = 50, "bio" = 30, "rad" = 30, "fire" = 90, "acid" = 90)
+	resistance_flags = UNACIDABLE

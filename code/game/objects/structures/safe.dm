@@ -10,15 +10,14 @@ FLOOR SAFES
 	name = "Secure Safe Combination"
 	var/obj/structure/safe/safe = null
 
-/obj/item/paper/safe_key/New()
-	..()
-	spawn(10)
-		for(var/obj/structure/safe/safe in loc)
-			if(safe)
-				info = "This looks like a handwritten page with two numbers on it: \n\n<b>[safe.tumbler_1_open]|[safe.tumbler_2_open]</b>."
-				info_links = info
-				icon_state = "paper_words"
-				break
+/obj/item/paper/safe_key/Initialize()
+	. = ..()
+	for(var/obj/structure/safe/safe in loc)
+		if(safe)
+			info = "This looks like a handwritten page with two numbers on it: \n\n<b>[safe.tumbler_1_open]|[safe.tumbler_2_open]</b>."
+			info_links = info
+			icon_state = "paper_words"
+			break
 
 /obj/structure/safe
 	name = "safe"
@@ -28,8 +27,7 @@ FLOOR SAFES
 	anchored = 1
 	density = 1
 	layer = BELOW_OBJ_LAYER
-	unacidable = 1
-	explosion_resistance = 500
+	resistance_flags = UNACIDABLE|INDESTRUCTIBLE
 	var/spawnkey = 1 //Spawn safe code on top of it?
 	var/open = 0		//is the safe open?
 	var/tumbler_1_pos	//the tumbler position- from 0 to 72
@@ -40,20 +38,13 @@ FLOOR SAFES
 	var/space = 0		//the combined w_class of everything in the safe
 	var/maxspace = 24	//the maximum combined w_class of stuff in the safe
 
-
-/obj/structure/safe/New()
-	..()
+/obj/structure/safe/Initialize()
+	. = ..()
 	tumbler_1_pos = 0
 	tumbler_1_open = (rand(0,10) * 5)
 
 	tumbler_2_pos = 0
 	tumbler_2_open = (rand(0,10) * 5)
-
-	spawn(5)
-		if(loc && spawnkey)
-			new /obj/item/paper/safe_key(loc) //Spawn the key on top of the safe.
-
-/obj/structure/safe/Initialize()
 	for(var/obj/item/I in loc)
 		if(istype(I,/obj/item/paper/safe_key))
 			continue
@@ -62,6 +53,10 @@ FLOOR SAFES
 		if(I.w_class + space <= maxspace)
 			space += I.w_class
 			I.loc = src
+	
+	// do this after swallowing items for obvious reasons
+	if(loc && spawnkey)
+		new /obj/item/paper/safe_key(loc) //Spawn the key on top of the safe.
 
 
 /obj/structure/safe/proc/check_unlocked(mob/user as mob, canhear)
@@ -189,9 +184,6 @@ FLOOR SAFES
 			to_chat(user, "Hold [I] in one of your hands while you manipulate the dial.")
 			return
 
-obj/structure/safe/ex_act(severity)
-	return
-
 //FLOOR SAFES
 /obj/structure/safe/floor
 	name = "floor safe"
@@ -202,10 +194,15 @@ obj/structure/safe/ex_act(severity)
 
 
 /obj/structure/safe/floor/Initialize()
-	..()
+	. = ..()
 	var/turf/T = loc
 	hide(T.intact_tile)
 
 
 /obj/structure/safe/floor/hide(var/intact)
-	invisibility = intact ? 101 : 0
+	invisibility = intact ? INVISIBILITY_MAXIMUM : 0
+
+/obj/structure/safe/floor/lvcolony
+	name = "safe"
+	spawnkey = FALSE
+	pixel_x = 30

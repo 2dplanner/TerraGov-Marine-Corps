@@ -1,434 +1,420 @@
-/*
-  GAMEMODES (by Rastaf0)
-
-  In the new mode system all special roles are fully supported.
-  You can have proper wizards/traitors/changelings/cultists during any mode.
-  Only two things really depends on gamemode:
-  1. Starting roles, equipment and preparations
-  2. Conditions of finishing the round.
-
- */
-
-
 /datum/game_mode
 	var/name = ""
 	var/config_tag = null
-	var/intercept_hacked = FALSE
 	var/votable = TRUE
 	var/probability = 0
-	var/list/datum/mind/modePlayer = new
-	var/list/restricted_jobs = list()	// Jobs it doesn't make sense to be.  I.E chaplain or AI cultist
-	var/list/protected_jobs = list()	// Jobs that can't be traitors because
 	var/required_players = 0
-	var/required_players_secret = 0 //Minimum number of players for that game mode to be chose in Secret
-	var/required_enemies = 0
-	var/recommended_enemies = 0
-	var/newscaster_announcements = null
-	var/ert_disabled = FALSE
-	var/uplink_welcome = "Syndicate Uplink Console:"
-	var/uplink_uses = 10
-	var/list/datum/uplink_item/uplink_items = list(
-		"Highly Visible and Dangerous Weapons" = list(
-			 new/datum/uplink_item(/obj/item/weapon/energy/sword, 4, "Energy Sword", "ES"),
-			 new/datum/uplink_item(/obj/item/storage/box/syndicate, 10, "Syndicate Bundle", "BU"),
-			 new/datum/uplink_item(/obj/item/storage/box/emps, 3, "5 EMP Grenades", "EM")
-			),
-		"Stealthy and Inconspicuous Weapons" = list(
-			new/datum/uplink_item(/obj/item/tool/pen/paralysis, 3, "Paralysis Pen", "PP"),
-			new/datum/uplink_item(/obj/item/tool/soap/syndie, 1, "Syndicate Soap", "SP"),
-			new/datum/uplink_item(/obj/item/cartridge/syndicate, 3, "Detomatix PDA Cartridge", "DC")
-			),
-		"Stealth and Camouflage Items" = list(
-			new/datum/uplink_item(/obj/item/storage/box/syndie_kit/chameleon, 3, "Chameleon Kit", "CB"),
-			new/datum/uplink_item(/obj/item/clothing/shoes/syndigaloshes, 2, "No-Slip Syndicate Shoes", "SH"),
-			new/datum/uplink_item(/obj/item/card/id/syndicate, 2, "Agent ID card", "AC"),
-			new/datum/uplink_item(/obj/item/clothing/mask/gas/voice, 4, "Voice Changer", "VC"),
-			new/datum/uplink_item(/obj/item/device/chameleon, 4, "Chameleon-Projector", "CP")
-			),
-		"Devices and Tools" = list(
-			new/datum/uplink_item(/obj/item/card/emag, 3, "Cryptographic Sequencer", "EC"),
-			new/datum/uplink_item(/obj/item/storage/toolbox/syndicate, 1, "Fully Loaded Toolbox", "ST"),
-			new/datum/uplink_item(/obj/item/storage/box/syndie_kit/space, 3, "Space Suit", "SS"),
-			new/datum/uplink_item(/obj/item/clothing/glasses/thermal/syndi, 3, "Thermal Imaging Glasses", "TM"),
-			new/datum/uplink_item(/obj/item/device/encryptionkey/binary, 3, "Binary Translator Key", "BT"),
-			new/datum/uplink_item(/obj/item/circuitboard/ai_module/syndicate, 7, "Hacked AI Upload Module", "AI"),
-			new/datum/uplink_item(/obj/item/explosive/plastique, 2, "C-4 (Destroys walls)", "C4"),
-			new/datum/uplink_item(/obj/item/device/powersink, 5, "Powersink (DANGER!)", "PS",),
-			new/datum/uplink_item(/obj/item/circuitboard/computer/teleporter, 20, "Teleporter Circuit Board", "TP")
-			),
-		"Implants" = list(
-			new/datum/uplink_item(/obj/item/storage/box/syndie_kit/imp_freedom, 3, "Freedom Implant", "FI"),
-			new/datum/uplink_item(/obj/item/storage/box/syndie_kit/imp_uplink, 10, "Uplink Implant (Contains 5 Telecrystals)", "UI"),
-			new/datum/uplink_item(/obj/item/storage/box/syndie_kit/imp_explosive, 6, "Explosive Implant (DANGER!)", "EI"),
-			new/datum/uplink_item(/obj/item/storage/box/syndie_kit/imp_compress, 4, "Compressed Matter Implant", "CI")
-			),
-		"(Pointless) Badassery" = list(
-			new/datum/uplink_item(/obj/item/toy/syndicateballoon, 10, "For showing that You Are The BOSS (Useless Balloon)", "BS")
-			)
-		)
+
+	var/round_finished
+
+	var/round_time_fog
+	var/flags_round_type = NOFLAGS
+	var/flags_landmarks = NOFLAGS
+
+	var/distress_cancelled = FALSE
+
+
+/datum/game_mode/New()
+	initialize_emergency_calls()
 
 
 /datum/game_mode/proc/announce()
-	return FALSE
+	return TRUE
 
 
 /datum/game_mode/proc/can_start()
-	var/players = ready_players()
-
-	if(master_mode == "secret" && players >= required_players_secret)
-		return TRUE
-	else if(players >= required_players)
-		return TRUE
-	else
+	if(GLOB.ready_players < required_players)
 		return FALSE
+	return TRUE
 
 
 /datum/game_mode/proc/pre_setup()
-	return FALSE
+	if(flags_landmarks & MODE_LANDMARK_SPAWN_XENO_TUNNELS)
+		setup_xeno_tunnels()
+
+	if(flags_landmarks & MODE_LANDMARK_SPAWN_MAP_ITEM)
+		spawn_map_items()
+
+	if(flags_round_type & MODE_FOG_ACTIVATED)
+		spawn_fog_blockers()
+		addtimer(CALLBACK(src, .proc/disperse_fog), FOG_DELAY_INTERVAL + SSticker.round_start_time + rand(-2500, 2500))
+
+	var/obj/effect/landmark/L
+	while(GLOB.landmarks_round_start.len)
+		L = GLOB.landmarks_round_start[GLOB.landmarks_round_start.len]
+		GLOB.landmarks_round_start.len--
+		L.after_round_start()
+
+	return TRUE
 
 
 /datum/game_mode/proc/post_setup()
 	spawn(ROUNDSTART_LOGOUT_REPORT_TIME)
 		display_roundstart_logout_report()
-
-	feedback_set_details("round_start","[time2text(world.realtime)]")
-	if(ticker?.mode)
-		feedback_set_details("game_mode","[ticker.mode]")
-	feedback_set_details("server_ip","[world.internet_address]:[world.port]")
-	return TRUE
+	if(!SSdbcore.Connect())
+		return
+	var/sql
+	if(SSticker.mode)
+		sql += "game_mode = '[SSticker.mode]'"
+	if(GLOB.revdata.originmastercommit)
+		if(sql)
+			sql += ", "
+		sql += "commit_hash = '[GLOB.revdata.originmastercommit]'"
+	if(sql)
+		var/datum/DBQuery/query_round_game_mode = SSdbcore.NewQuery("UPDATE [format_table_name("round")] SET [sql] WHERE id = [GLOB.round_id]")
+		query_round_game_mode.Execute()
+		qdel(query_round_game_mode)
 
 
 /datum/game_mode/process()
-	return FALSE
+	return TRUE
 
 
 /datum/game_mode/proc/check_finished()
-	if(EvacuationAuthority.dest_status == NUKE_EXPLOSION_FINISHED)
+	if(SSevacuation.dest_status == NUKE_EXPLOSION_FINISHED)
 		return TRUE
 
 
-/datum/game_mode/proc/cleanup()
-	return FALSE
-
-
 /datum/game_mode/proc/declare_completion()
-	var/clients = 0
-	var/surviving_humans = 0
-	var/surviving_total = 0
-	var/ghosts = 0
-	var/escaped_humans = 0
-	var/escaped_total = 0
-	var/escaped_on_pod_1 = 0
-	var/escaped_on_pod_2 = 0
-	var/escaped_on_pod_3 = 0
-	var/escaped_on_pod_5 = 0
-	var/escaped_on_shuttle = 0
-
-	var/list/area/escape_locations = list(/area/shuttle/escape/centcom, /area/shuttle/escape_pod1/centcom, /area/shuttle/escape_pod2/centcom, /area/shuttle/escape_pod3/centcom, /area/shuttle/escape_pod5/centcom)
-
-	for(var/mob/M in player_list)
-		if(M.client)
-			clients++
-			if(ishuman(M))
-				if(!M.stat)
-					surviving_humans++
-					if(M.loc && M.loc.loc && M.loc.loc.type in escape_locations)
-						escaped_humans++
-			if(!M.stat)
-				surviving_total++
-				if(M.loc && M.loc.loc && M.loc.loc.type in escape_locations)
-					escaped_total++
-
-				if(M.loc && M.loc.loc && M.loc.loc.type == /area/shuttle/escape/centcom)
-					escaped_on_shuttle++
-
-				if(M.loc && M.loc.loc && M.loc.loc.type == /area/shuttle/escape_pod1/centcom)
-					escaped_on_pod_1++
-				if(M.loc && M.loc.loc && M.loc.loc.type == /area/shuttle/escape_pod2/centcom)
-					escaped_on_pod_2++
-				if(M.loc && M.loc.loc && M.loc.loc.type == /area/shuttle/escape_pod3/centcom)
-					escaped_on_pod_3++
-				if(M.loc && M.loc.loc && M.loc.loc.type == /area/shuttle/escape_pod5/centcom)
-					escaped_on_pod_5++
-
-			if(isobserver(M))
-				ghosts++
-
-	if(clients > 0)
-		feedback_set("round_end_clients",clients)
-	if(ghosts > 0)
-		feedback_set("round_end_ghosts",ghosts)
-	if(surviving_humans > 0)
-		feedback_set("survived_human",surviving_humans)
-	if(surviving_total > 0)
-		feedback_set("survived_total",surviving_total)
-	if(escaped_humans > 0)
-		feedback_set("escaped_human",escaped_humans)
-	if(escaped_total > 0)
-		feedback_set("escaped_total",escaped_total)
-	if(escaped_on_shuttle > 0)
-		feedback_set("escaped_on_shuttle",escaped_on_shuttle)
-	if(escaped_on_pod_1 > 0)
-		feedback_set("escaped_on_pod_1",escaped_on_pod_1)
-	if(escaped_on_pod_2 > 0)
-		feedback_set("escaped_on_pod_2",escaped_on_pod_2)
-	if(escaped_on_pod_3 > 0)
-		feedback_set("escaped_on_pod_3",escaped_on_pod_3)
-	if(escaped_on_pod_5 > 0)
-		feedback_set("escaped_on_pod_5",escaped_on_pod_5)
-
-	return FALSE
+	SSdbcore.SetRoundEnd()
+	end_of_round_deathmatch()
+	return TRUE
 
 
-/datum/game_mode/proc/check_win()
-	return FALSE
-
-
-/datum/game_mode/proc/send_intercept()
-	return FALSE
-
-
-/datum/game_mode/proc/get_players_for_role(var/role, override_jobbans = 0)
-	var/list/players = list()
+/datum/game_mode/proc/get_players_for_role(role, override_jobbans = FALSE)
 	var/list/candidates = list()
-	var/list/drafted = list()
-	var/datum/mind/applicant = null
 
 	var/roletext
 	switch(role)
-		if(BE_DEATHMATCH)	roletext = "End of Round Deathmatch"
-		if(BE_ALIEN)		roletext = "Alien"
-		if(BE_QUEEN)		roletext = "Queen"
-		if(BE_SURVIVOR)		roletext = "Survivor"
-		if(BE_PREDATOR)		roletext = "Predator"
-		if(BE_SQUAD_STRICT)	roletext = "Prefer squad over role"
+		if(BE_DEATHMATCH)
+			roletext = "End of Round Deathmatch"
+		if(BE_ALIEN)
+			roletext = ROLE_XENOMORPH
+		if(BE_QUEEN)
+			roletext = ROLE_XENO_QUEEN
+		if(BE_SURVIVOR)
+			roletext = ROLE_SURVIVOR
+		if(BE_SQUAD_STRICT)
+			roletext = "Prefer squad over role"
 
 	//Assemble a list of active players without jobbans.
-	for(var/mob/new_player/player in player_list)
-		if(player.client && player.ready)
-			if(!jobban_isbanned(player, "Syndicate") && !jobban_isbanned(player, roletext))
-				players += player
+	for(var/mob/new_player/player in GLOB.player_list)
+		if(!(player.client?.prefs?.be_special & role) || !player.ready)
+			continue
+		else if(jobban_isbanned(player, roletext) || is_banned_from(player.ckey, roletext))
+			continue	
+		log_game("[key_name(player)] had [roletext] enabled, so we are drafting them.")
+		candidates += player.mind
 
 	//Shuffle the players list so that it becomes ping-independent.
-	players = shuffle(players)
+	candidates = shuffle(candidates)
 
-	//Get a list of all the people who want to be the antagonist for this round
-	for(var/mob/new_player/player in players)
-		if(player.client.prefs.be_special & role)
-			log_game("[player.key] had [roletext] enabled, so we are drafting them.")
-			candidates += player.mind
-			players -= player
-
-	//If we don't have enough antags, draft people who voted for the round.
-	if(candidates.len < recommended_enemies)
-		for(var/key in round_voters)
-			for(var/mob/new_player/player in players)
-				if(player.ckey == key)
-					log_game("[player.key] voted for this round, so we are drafting them.")
-					candidates += player.mind
-					players -= player
-					break
-
-	//Remove candidates who want to be antagonist but have a job that precludes it
-	if(restricted_jobs)
-		for(var/datum/mind/player in candidates)
-			for(var/job in restricted_jobs)
-				if(player.assigned_role == job)
-					candidates -= player
-
-	if(candidates.len < recommended_enemies)
-		for(var/mob/new_player/player in players)
-			if(player.client && player.ready)
-				if(!(player.client.prefs.be_special & role)) //We don't have enough people who want to be antagonist, make a seperate list of people who don't want to be one
-					if(!jobban_isbanned(player, "Syndicate") && !jobban_isbanned(player, roletext)) //Nodrak/Carn: Antag Job-bans
-						drafted += player.mind
-
-	if(candidates.len < recommended_enemies && override_jobbans) //If we still don't have enough people, we're going to start drafting banned people.
-		for(var/mob/new_player/player in players)
-			if (player.client && player.ready)
-				if(jobban_isbanned(player, "Syndicate") || jobban_isbanned(player, roletext)) //Nodrak/Carn: Antag Job-bans
-					drafted += player.mind
-
-	if(restricted_jobs)
-		for(var/datum/mind/player in drafted) //Remove people who can't be an antagonist
-			for(var/job in restricted_jobs)
-				if(player.assigned_role == job)
-					drafted -= player
-
-	drafted = shuffle(drafted) // Will hopefully increase randomness, Donkie
-
-	while(candidates.len < recommended_enemies) //Pick randomly just the number of people we need and add them to our list of candidates
-		if(drafted.len > 0)
-			applicant = pick(drafted)
-			if(applicant)
-				candidates += applicant
-				drafted.Remove(applicant)
-				to_chat(world, "<span class='warning'>[applicant.key] was force-drafted as [roletext], because there aren't enough candidates.</span>")
-				log_game("[applicant.key] was force-drafted as [roletext], because there aren't enough candidates.")
-
-		else //Not enough scrubs, ABORT ABORT ABORT
-			break
-
-	return candidates		//Returns:	The number of people who had the antagonist role set to yes, regardless of recomended_enemies, if that number is greater than recommended_enemies
-							//			recommended_enemies if the number of people with that role set to yes is less than recomended_enemies,
-							//			Less if there are not enough valid players in the game entirely to make recommended_enemies.
-
-
-/datum/game_mode/proc/latespawn(var/mob)
-	return FALSE
-
-
-/datum/game_mode/proc/ready_players()
-	var/num = 0
-	for(var/mob/new_player/P in player_list)
-		if(P.client && P.ready)
-			num++
-	return num
-
-
-/datum/game_mode/proc/get_living_heads()
-	var/list/heads = list()
-	for(var/mob/living/carbon/human/player in mob_list)
-		if(player.stat != DEAD && player.mind && (player.mind.assigned_role in ROLES_COMMAND))
-			heads += player.mind
-	return heads
-
-
-/datum/game_mode/proc/get_all_heads()
-	var/list/heads = list()
-	for(var/mob/player in mob_list)
-		if(player.mind && (player.mind.assigned_role in ROLES_COMMAND ))
-			heads += player.mind
-	return heads
-
-
-/datum/game_mode/proc/check_antagonists_topic(href, href_list[])
-	return FALSE
-
-
-/datum/game_mode/New()
-	if(!map_tag)
-		to_chat(world, "MT001: No mapping tag set, tell a coder. [map_tag]")
+	return candidates
 
 
 /datum/game_mode/proc/display_roundstart_logout_report()
-	var/msg = "<span class='notice'><b>Roundstart logout report</b></span>"
-	for(var/mob/living/L in mob_list)
-
-		if(L.ckey)
-			var/found = 0
-			for(var/client/C in clients)
-				if(C.ckey == L.ckey)
-					found = 1
-					break
-			if(!found)
-				msg += "<b>[L.name]</b> ([L.ckey]), the [L.job] (<font color='#ffcc00'><b>Disconnected</b></font>)\n"
-
-
+	var/msg = "<hr><span class='notice'><b>Roundstart logout report</b></span><br>"
+	for(var/mob/living/L in GLOB.mob_living_list)
 		if(L.ckey && L.client)
-			if(L.client.inactivity >= (ROUNDSTART_LOGOUT_REPORT_TIME / 2))	//Connected, but inactive (alt+tabbed or something)
-				msg += "<b>[L.name]</b> ([L.ckey]), the [L.job] (<font color='#ffcc00'><b>Connected, Inactive</b></font>)\n"
-				continue //AFK client
-			if(L.stat)
-				if(L.suiciding)	//Suicider
-					msg += "<b>[L.name]</b> ([L.ckey]), the [L.job] (<font color='red'><b>Suicide</b></font>)\n"
-					continue //Disconnected client
-				if(L.stat == UNCONSCIOUS)
-					msg += "<b>[L.name]</b> ([L.ckey]), the [L.job] (Dying)\n"
-					continue //Unconscious
-				if(L.stat == DEAD)
-					msg += "<b>[L.name]</b> ([L.ckey]), the [L.job] (Dead)\n"
-					continue //Dead
+			continue
 
-			continue //Happy connected client
-		for(var/mob/dead/observer/D in mob_list)
-			if(D.mind && (D.mind.original == L || D.mind.current == L))
-				if(L.stat == DEAD)
-					if(L.suiciding)	//Suicider
-						msg += "<b>[L.name]</b> ([ckey(D.mind.key)]), the [L.job] (<font color='red'><b>Suicide</b></font>)\n"
-						continue //Disconnected client
-					else
-						msg += "<b>[L.name]</b> ([ckey(D.mind.key)]), the [L.job] (Dead)\n"
-						continue //Dead mob, ghost abandoned
-				else
-					if(D.can_reenter_corpse)
-						msg += "<b>[L.name]</b> ([ckey(D.mind.key)]), the [L.job] (<font color='red'><b>This shouldn't appear.</b></font>)\n"
-						continue //Lolwhat
-					else
-						msg += "<b>[L.name]</b> ([ckey(D.mind.key)]), the [L.job] (<font color='red'><b>Ghosted</b></font>)\n"
-						continue //Ghosted while alive
+		else if(L.ckey)
+			msg += "<b>[ADMIN_TPMONTY(L)]</b> the [L.job] (<b>Disconnected</b>)<br>"
 
+		else if(L.client)
+			if(L.client.inactivity >= (ROUNDSTART_LOGOUT_REPORT_TIME / 2))
+				msg += "<b>[ADMIN_TPMONTY(L)]</b> the [L.job] (<b>Connected, Inactive</b>)<br>"
+			else if(L.stat)
+				if(L.suiciding)
+					msg += "<b>[ADMIN_TPMONTY(L)]</b> the [L.job] (<b>Suicide</b>)<br>"
+				else if(L.stat == UNCONSCIOUS)
+					msg += "<b>[ADMIN_TPMONTY(L)]</b> the [L.job] (Dying)<br>"
+				else if(L.stat == DEAD)
+					msg += "<b>[ADMIN_TPMONTY(L)]</b> the [L.job] (Dead)<br>"
 
+	for(var/mob/dead/observer/D in GLOB.dead_mob_list)
+		if(!isliving(D.mind?.current))
+			continue
+		var/mob/living/L = D.mind.current
+		if(L.stat == DEAD)
+			if(L.suiciding)
+				msg += "<b>[ADMIN_TPMONTY(L)]</b> the [L.job] (<b>Suicide</b>)<br>"
+			else
+				msg += "<b>[ADMIN_TPMONTY(L)]</b> the [L.job] (Dead)<br>"
+		else if(!D.can_reenter_corpse)
+			msg += "<b>[ADMIN_TPMONTY(L)]</b> the [L.job] (<b>Ghosted</b>)<br>"
+				
 
-	for(var/mob/M in mob_list)
-		if(M.client && M.client.holder)
-			to_chat(M, msg)
+	msg += "<hr>"
 
-
-/datum/game_mode/proc/get_nt_opposed()
-	var/list/dudes = list()
-	for(var/mob/living/carbon/human/man in player_list)
-		if(man.client)
-			if(man.client.prefs.nanotrasen_relation == "Opposed")
-				dudes += man
-			else if(man.client.prefs.nanotrasen_relation == "Skeptical" && prob(50))
-				dudes += man
-	if(dudes.len == 0)
-		return null
-	else
-		return pick(dudes)
+	for(var/i in GLOB.clients)
+		var/client/C = i
+		if(!check_other_rights(C, R_ADMIN, FALSE))
+			continue
+		to_chat(C, msg)
 
 
-/proc/show_generic_antag_text(var/datum/mind/player)
-	if(!player?.current)
+/datum/game_mode/proc/spawn_map_items()
+	var/turf/T
+	switch(SSmapping.config.map_name) // doing the switch first makes this a tiny bit quicker which for round setup is more important than pretty code
+		if(MAP_LV_624)
+			while(GLOB.map_items.len)
+				T = GLOB.map_items[GLOB.map_items.len]
+				GLOB.map_items.len--
+				new /obj/item/map/lazarus_landing_map(T)
+
+		if(MAP_ICE_COLONY)
+			while(GLOB.map_items.len)
+				T = GLOB.map_items[GLOB.map_items.len]
+				GLOB.map_items.len--
+				new /obj/item/map/ice_colony_map(T)
+
+		if(MAP_BIG_RED)
+			while(GLOB.map_items.len)
+				T = GLOB.map_items[GLOB.map_items.len]
+				GLOB.map_items.len--
+				new /obj/item/map/big_red_map(T)
+
+		if(MAP_PRISON_STATION)
+			while(GLOB.map_items.len)
+				T = GLOB.map_items[GLOB.map_items.len]
+				GLOB.map_items.len--
+				new /obj/item/map/FOP_map(T)
+
+
+/datum/game_mode/proc/setup_xeno_tunnels()
+	var/obj/structure/tunnel/T
+	var/i = 0
+	var/turf/t
+	while(length(GLOB.xeno_tunnel_landmarks) && i++ < MAX_TUNNELS_PER_MAP)
+		t = pick(GLOB.xeno_tunnel_landmarks)
+		GLOB.xeno_tunnel_landmarks -= t
+		T = new (t)
+		T.id = "hole[i]"
+		for(var/x in GLOB.xeno_tunnels)
+			var/obj/structure/tunnel/TO = x
+			if(TO.id != T.id || T == TO || TO.other)
+				continue
+			TO.other = T
+			T.other = TO
+
+
+/datum/game_mode/proc/spawn_fog_blockers()
+	var/turf/T
+	while(GLOB.fog_blocker_locations.len)
+		T = GLOB.fog_blocker_locations[GLOB.fog_blocker_locations.len]
+		GLOB.fog_blocker_locations.len--
+		new /obj/effect/forcefield/fog(T)
+
+
+/datum/game_mode/proc/end_of_round_deathmatch()
+	var/list/spawns = GLOB.deathmatch.Copy()
+
+	CONFIG_SET(flag/allow_synthetic_gun_use, TRUE)
+
+	if(!length(spawns))
+		to_chat(world, "<br><br><h1><span class='danger'>End of Round Deathmatch initialization failed, please do not grief.</span></h1><br><br>")
 		return
 
-	to_chat(player.current, {"You are an antagonist! <font color=blue>Within the rules,</font>
-	try to act as an opposing force to the crew. Further RP and try to make sure
-	other players have <i>fun</i>! If you are confused or at a loss, always adminhelp,
-	and before taking extreme actions, please try to also contact the administration!
-	Think through your actions and make the roleplay immersive! <b>Please remember all
-	rules aside from those without explicit exceptions apply to antagonists.</b>"})
+	for(var/i in GLOB.player_list)
+		var/mob/M = i
+		if(isnewplayer(M))
+			continue
+		if(!(M.client?.prefs?.be_special & BE_DEATHMATCH))
+			continue
 
-
-/proc/show_objectives(var/datum/mind/player)
-	if(!player?.current)
-		return
-
-	if(CONFIG_GET(flag/objectives_disabled))
-		show_generic_antag_text(player)
-		return
-
-	var/obj_count = 1
-	to_chat(player.current, "<span class='notice'><b>Your current objectives:</b></span>")
-	for(var/datum/objective/objective in player.objectives)
-		to_chat(player.current, "<B>Objective #[obj_count]</B>: [objective.explanation_text]")
-		obj_count++
-
-
-/datum/game_mode/proc/printplayer(var/datum/mind/player)
-	if(!player)
-		return
-
-	var/role
-
-	if(player.special_role)
-		role = player.special_role
-	else if(player.assigned_role)
-		role = player.assigned_role
-	else
-		role = "Unassigned"
-
-	var/text = "<br><b>[player.name]</b>(<b>[player.key]</b>) as \a <b>[role]</b> ("
-	if(player.current)
-		if(player.current.stat == DEAD)
-			text += "died"
+		var/mob/living/L
+		if(!isliving(M))
+			L = new /mob/living/carbon/human
 		else
-			text += "survived"
-		if(player.current.real_name != player.name)
-			text += " as <b>[player.current.real_name]</b>"
-	else
-		text += "body destroyed"
-	text += ")"
+			L = M
 
-	return text
+		var/turf/picked
+		if(length(spawns))
+			picked = pick(spawns)
+			spawns -= picked
+		else
+			spawns = GLOB.deathmatch.Copy()
+
+			if(!length(spawns))
+				to_chat(world, "<br><br><h1><span class='danger'>End of Round Deathmatch initialization failed, please do not grief.</span></h1><br><br>")
+				return
+			
+			picked = pick(spawns)
+			spawns -= picked
+
+
+		if(!picked)
+			to_chat(L, "<br><br><h1><span class='danger'>Failed to find a valid location for End of Round Deathmatch. Please do not grief.</span></h1><br><br>")
+			continue
+
+		if(!L.mind)
+			M.mind.transfer_to(L, TRUE)
+			
+		L.mind.bypass_ff = TRUE
+		L.forceMove(picked)
+		L.revive()
+
+		if(isxeno(L))
+			var/mob/living/carbon/Xenomorph/X = L
+			X.transfer_to_hive(pick(XENO_HIVE_NORMAL, XENO_HIVE_CORRUPTED, XENO_HIVE_ALPHA, XENO_HIVE_BETA, XENO_HIVE_ZETA))
+
+		else if(ishuman(L))
+			var/mob/living/carbon/human/H = L
+			if(!H.w_uniform)
+				var/job = pick(/datum/job/clf/leader, /datum/job/upp/commando/leader, /datum/job/freelancer/leader)
+				var/datum/job/J = new job
+				J.equip(H)
+				H.regenerate_icons()
+
+		to_chat(L, "<br><br><h1><span class='danger'>Fight for your life!</span></h1><br><br>")
+
+
+/datum/game_mode/proc/check_queen_status(queen_time)
+	return
+
+
+/datum/game_mode/proc/get_queen_countdown()
+	return
+
+
+/datum/game_mode/proc/announce_medal_awards()
+	if(!length(GLOB.medal_awards))
+		return
+
+	var/dat =  "<span class='round_body'>Medal Awards:</span>"
+
+	for(var/recipient in GLOB.medal_awards)
+		var/datum/recipient_awards/RA = GLOB.medal_awards[recipient]
+		for(var/i in 1 to length(RA.medal_names))
+			dat += "<br><b>[RA.recipient_rank] [recipient]</b> is awarded [RA.posthumous[i] ? "posthumously " : ""]the <span class='boldnotice'>[RA.medal_names[i]]</span>: \'<i>[RA.medal_citations[i]]</i>\'."
+	
+	to_chat(world, dat)
+
+
+/datum/game_mode/proc/announce_round_stats()
+	var/list/dat = list({"<span class='round_body'>The end of round statistics are:</span><br>
+		<br>There were [round_statistics.total_bullets_fired] total bullets fired.
+		<br>[round_statistics.total_bullet_hits_on_marines] bullets managed to hit marines. For a [(round_statistics.total_bullet_hits_on_marines / max(round_statistics.total_bullets_fired, 1)) * 100]% friendly fire rate!"})
+	if(round_statistics.total_bullet_hits_on_xenos)
+		dat += "[round_statistics.total_bullet_hits_on_xenos] bullets managed to hit xenomorphs. For a [(round_statistics.total_bullet_hits_on_xenos / max(round_statistics.total_bullets_fired, 1)) * 100]% accuracy total!"
+	if(round_statistics.grenades_thrown)
+		dat += "[round_statistics.grenades_thrown] total grenades exploding."
+	else
+		dat += "No grenades exploded."
+	if(round_statistics.now_pregnant)
+		dat += "[round_statistics.now_pregnant] people infected among which [round_statistics.total_larva_burst] burst. For a [(round_statistics.total_larva_burst / max(round_statistics.now_pregnant, 1)) * 100]% successful delivery rate!"
+	if(round_statistics.queen_screech)
+		dat += "[round_statistics.queen_screech] Queen screeches."
+	if(round_statistics.ravager_ravage_victims)
+		dat += "[round_statistics.ravager_ravage_victims] ravaged victims. Damn, Ravagers!"
+	if(round_statistics.warrior_limb_rips)
+		dat += "[round_statistics.warrior_limb_rips] limbs ripped off by Warriors."
+	if(round_statistics.crusher_stomp_victims)
+		dat += "[round_statistics.crusher_stomp_victims] people stomped by crushers."
+	if(round_statistics.praetorian_spray_direct_hits)
+		dat += "[round_statistics.praetorian_spray_direct_hits] people hit directly by Praetorian acid spray."
+	if(round_statistics.weeds_planted)
+		dat += "[round_statistics.weeds_planted] weed nodes planted."
+	if(round_statistics.weeds_destroyed)
+		dat += "[round_statistics.weeds_destroyed] weed tiles removed."
+	if(round_statistics.carrier_traps)
+		dat += "[round_statistics.carrier_traps] hidey holes for huggers were made."
+	if(round_statistics.sentinel_neurotoxin_stings)
+		dat += "[round_statistics.sentinel_neurotoxin_stings] number of times Sentinels stung."
+	if(round_statistics.drone_salvage_plasma)
+		dat += "[round_statistics.drone_salvage_plasma] number of times Drones salvaged corpses."
+	if(round_statistics.defiler_defiler_stings)
+		dat += "[round_statistics.defiler_defiler_stings] number of times Defilers stung."
+	if(round_statistics.defiler_neurogas_uses)
+		dat += "[round_statistics.defiler_neurogas_uses] number of times Defilers vented neurogas."
+	var/output = jointext(dat, "<br>")
+	for(var/mob/player in GLOB.player_list)
+		if(player?.client?.prefs?.toggles_chat & CHAT_STATISTICS)
+			to_chat(player, output)
+
+
+/datum/game_mode/proc/count_humans_and_xenos(list/z_levels = SSmapping.levels_by_any_trait(list(ZTRAIT_MARINE_MAIN_SHIP, ZTRAIT_LOW_ORBIT, ZTRAIT_GROUND)))
+	var/num_humans = 0
+	var/num_xenos = 0
+
+	for(var/i in GLOB.alive_human_list)
+		var/mob/living/carbon/human/H = i
+		if(!H.client)
+			continue
+		if(H.status_flags & XENO_HOST)
+			continue
+		if(!(H.z in z_levels) || isspaceturf(H.loc))
+			continue
+		num_humans++
+
+	for(var/i in GLOB.alive_xeno_list)
+		var/mob/living/carbon/Xenomorph/X = i
+		if(!X.client)
+			continue
+		if(!(X.z in z_levels) || isspaceturf(X.loc))
+			continue
+		num_xenos++
+
+	return list(num_humans, num_xenos)
+
+
+/datum/game_mode/proc/disperse_fog()
+	set waitfor = FALSE
+
+	flags_round_type &= ~MODE_FOG_ACTIVATED
+	for(var/i in GLOB.fog_blockers)
+		qdel(i)
+		sleep(1)
+
+
+/datum/game_mode/proc/attempt_to_join_as_larva(mob/xeno_candidate)
+	to_chat(xeno_candidate, "<span class='warning'>This is unavailable in this gamemode.</span>")
+	return FALSE
+
+
+/datum/game_mode/proc/spawn_larva(mob/xeno_candidate)
+	to_chat(xeno_candidate, "<span class='warning'>This is unavailable in this gamemode.</span>")
+	return FALSE
+
+/datum/game_mode/proc/transfer_xeno(mob/xeno_candidate, mob/living/carbon/Xenomorph/X)
+	xeno_candidate.mind.transfer_to(X, TRUE)
+	message_admins("[key_name(xeno_candidate)] has joined as [ADMIN_TPMONTY(X)].")
+	if(X.is_ventcrawling)  //If we are in a vent, fetch a fresh vent map
+		X.add_ventcrawl(X.loc)
+
+
+/datum/game_mode/proc/attempt_to_join_as_xeno(mob/xeno_candidate, instant_join = FALSE)
+	var/list/available_xenos = list()
+	for(var/hive in GLOB.hive_datums)
+		var/datum/hive_status/HS = GLOB.hive_datums[hive]
+		available_xenos += HS.get_ssd_xenos(instant_join)
+
+	if(!available_xenos.len)
+		to_chat(xeno_candidate, "<span class='warning'>There aren't any available already living xenomorphs. You can try waiting for a larva to burst if you have the preference enabled.</span>")
+		return FALSE
+
+	if(instant_join)
+		return pick(available_xenos) //Just picks something at random.
+
+	var/mob/living/carbon/Xenomorph/new_xeno = input("Available Xenomorphs") as null|anything in available_xenos
+	if(!istype(new_xeno) || !xeno_candidate?.client)
+		return FALSE
+
+	if(new_xeno.stat == DEAD)
+		to_chat(xeno_candidate, "<span class='warning'>You cannot join if the xenomorph is dead.</span>")
+		return FALSE
+
+	if(new_xeno.client)
+		to_chat(xeno_candidate, "<span class='warning'>That xenomorph has been occupied.</span>")
+		return FALSE
+
+	if(!DEATHTIME_CHECK(xeno_candidate))
+		DEATHTIME_MESSAGE(xeno_candidate)
+		return FALSE
+
+	if(new_xeno.away_timer < XENO_AFK_TIMER) //We do not want to occupy them if they've only been gone for a little bit.
+		to_chat(xeno_candidate, "<span class='warning'>That player hasn't been away long enough. Please wait [XENO_AFK_TIMER - new_xeno.away_timer] second\s longer.</span>")
+		return FALSE
+
+	return new_xeno

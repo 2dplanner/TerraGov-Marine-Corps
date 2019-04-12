@@ -11,7 +11,6 @@
 	climb_delay = 20 //Doesn't need as long to climb over a crate
 	anchored = 0
 	store_mobs = FALSE
-	can_supply_drop = TRUE
 	var/rigged = 0
 
 /obj/structure/closet/crate/can_open()
@@ -39,7 +38,7 @@
 	if(!can_open())
 		return 0
 
-	if(rigged && locate(/obj/item/device/radio/electropack) in src)
+	if(rigged && locate(/obj/item/radio/electropack) in src)
 		if(isliving(usr))
 			var/mob/living/L = usr
 			if(L.electrocute_act(17, src))
@@ -86,12 +85,12 @@
 /obj/structure/closet/crate/attackby(obj/item/W as obj, mob/user as mob)
 	if(W.flags_item & ITEM_ABSTRACT) return
 	if(opened)
-		if(isrobot(user))
+		if(iscyborg(user))
 			return
 		user.transferItemToLoc(W, loc)
 	else if(istype(W, /obj/item/packageWrap))
 		return
-	else if(istype(W, /obj/item/stack/cable_coil))
+	else if(iscablecoil(W))
 		var/obj/item/stack/cable_coil/C = W
 		if(rigged)
 			to_chat(user, "<span class='notice'>[src] is already rigged!</span>")
@@ -100,13 +99,13 @@
 			user  << "<span class='notice'>You rig [src].</span>"
 			rigged = 1
 			return
-	else if(istype(W, /obj/item/device/radio/electropack))
+	else if(istype(W, /obj/item/radio/electropack))
 		if(rigged)
 			user  << "<span class='notice'>You attach [W] to [src].</span>"
 			user.drop_held_item()
 			W.loc = src
 			return
-	else if(istype(W, /obj/item/tool/wirecutters))
+	else if(iswirecutter(W))
 		if(rigged)
 			user  << "<span class='notice'>You cut away the wiring.</span>"
 			playsound(loc, 'sound/items/Wirecutter.ogg', 25, 1)
@@ -255,7 +254,7 @@
 	new /obj/item/ammo_rcd(src)
 	new /obj/item/ammo_rcd(src)
 	new /obj/item/ammo_rcd(src)
-	new /obj/item/device/rcd(src)
+	new /obj/item/rcd(src)
 
 /obj/structure/closet/crate/solar
 	name = "Solar Pack crate"

@@ -29,14 +29,21 @@
 		M.stop_pulling()
 	. = ..()
 
+
 /obj/item/grab/afterattack(atom/target, mob/user, proximity_flag, click_parameters)
-	if(user.pulling == user.buckled) return //can't move the thing you're sitting on.
+	if(!istype(user))
+		return
+	if(user.pulling == user.buckled)
+		return //can't move the thing you're sitting on.
 	if(istype(target, /obj/effect))//if you click a blood splatter with a grab instead of the turf,
 		target = get_turf(target)	//we still try to move the grabbed thing to the turf.
-	if(isturf(target))
-		var/turf/T = target
-		if(!T.density && T.Adjacent(user))
-			step(user.pulling, get_dir(user.pulling.loc, T))
+	if(!isturf(target))
+		return
+	var/turf/T = target
+	if(T.density || !T.Adjacent(user))
+		return
+	user.changeNext_move(CLICK_CD_MELEE)
+	step(user.pulling, get_dir(user.pulling.loc, T))
 
 
 /obj/item/grab/attack_self(mob/user)
@@ -44,7 +51,7 @@
 		return
 
 	if(!ishuman(user)) //only humans can reinforce a grab.
-		if (isXeno(user))
+		if (isxeno(user))
 			var/mob/living/carbon/Xenomorph/X = user
 			X.pull_power(grabbed_thing)
 		return
@@ -58,12 +65,12 @@
 		switch(user.grab_level)
 			if(GRAB_KILL)
 				icon_state = "disarm/kill1"
-				user.visible_message("<span class='danger'>[user] has tightened \his grip on [victim]'s neck!</span>", null, null, 5)
+				user.visible_message("<span class='danger'>[user] has tightened [user.p_their()] grip on [victim]'s neck!</span>", null, null, 5)
 				log_combat(user, victim, "strangled", addition="(kill intent)")
 				msg_admin_attack("[key_name(user)] strangled (kill intent) [key_name(victim)]")
 			if(GRAB_NECK)
 				icon_state = "disarm/kill"
-				user.visible_message("<span class='warning'>[user] has reinforced \his grip on [victim] (now neck)!</span>", null, null, 5)
+				user.visible_message("<span class='warning'>[user] has reinforced [user.p_their()] grip on [victim] (now neck)!</span>", null, null, 5)
 				log_combat(user, victim, "neck grabbed")
 				msg_admin_attack("[key_name(user)] grabbed the neck of [key_name(victim)]")
 			if(GRAB_AGGRESSIVE)
@@ -71,12 +78,12 @@
 		victim.update_canmove()
 
 /obj/item/grab/attack(mob/living/M, mob/living/user, def_zone)
-	if(M == user && user.pulling && isXeno(user))
+	if(M == user && user.pulling && isxeno(user))
 		var/mob/living/carbon/Xenomorph/X = user
 		var/mob/living/carbon/pulled = X.pulling
 		if(!istype(pulled))
 			return
-		if(isXeno(pulled) || isSynth(pulled))
+		if(isxeno(pulled) || issynth(pulled))
 			to_chat(X, "<span class='warning'>That wouldn't taste very good.</span>")
 			return 0
 		if(pulled.buckled)
@@ -91,9 +98,9 @@
 			/* Saving this in case we want to allow devouring of dead bodies UNLESS their client is still online somewhere
 			if(pulled.client) //The client is still inside the body
 			else // The client is observing
-				for(var/mob/dead/observer/G in player_list)
+				for(var/mob/dead/observer/G in GLOB.player_list)
 					if(ckey(G.mind.original.ckey) == pulled.ckey)
-						to_chat(src, "You start to devour [pulled] but realize \he is already dead.")
+						to_chat(src, "You start to devour [pulled] but realize [user.p_they()] is already dead.")
 						return */
 		X.visible_message("<span class='danger'>[X] starts to devour [pulled]!</span>", \
 		"<span class='danger'>You start to devour [pulled]!</span>", null, 5)
@@ -101,7 +108,8 @@
 			if(X.pulling == pulled && !pulled.buckled && pulled.stat != DEAD && !X.stomach_contents.len) //make sure you've still got them in your claws, and alive
 				X.visible_message("<span class='warning'>[X] devours [pulled]!</span>", \
 				"<span class='warning'>You devour [pulled]!</span>", null, 5)
-				X.devour_timer = world.time + 1100 + rand(0,200) // 110-130 seconds
+				var/DT = pulled.client ? 50 SECONDS + rand(0, 20 SECONDS) : 3 MINUTES // 50-70 seconds if there's a client, three minutes otherwise
+				X.devour_timer = world.time + DT
 
 				//IMPORTANT CODER NOTE: Due to us using the old lighting engine, we need to hacky hack hard to get this working properly
 				//So we're just going to get the lights out of here by forceMoving them to a far-away place
@@ -113,11 +121,13 @@
 
 				//Then, we place the mob where it ought to be
 				X.stomach_contents.Add(pulled)
+				pulled.KnockDown(360)
+				pulled.blind_eyes(1)
 				pulled.forceMove(X)
 				if(ishuman(pulled)) //Check for camera; if we have one, turn it off.
 					var/mob/living/carbon/human/H = pulled
-					if(istype(H.wear_ear, /obj/item/device/radio/headset/almayer/marine))
-						var/obj/item/device/radio/headset/almayer/marine/R = H.wear_ear
+					if(istype(H.wear_ear, /obj/item/radio/headset/almayer/marine))
+						var/obj/item/radio/headset/almayer/marine/R = H.wear_ear
 						if(R.camera.status)
 							R.camera.status = FALSE //Turn camera off.
 							to_chat(H, "<span class='danger'>Your headset camera flickers off as you are devoured; you'll need to reactivate it by rebooting your headset HUD!<span>")

@@ -4,8 +4,8 @@
 	name = "supply spawner"
 	var/list/supply = list()
 
-/obj/effect/landmark/supplyspawner/New()
-	..()
+/obj/effect/landmark/supplyspawner/Initialize()
+	. = ..()
 	if(/turf/open in range(1))
 		var/list/T = list()
 		for(var/turf/open/O in range(1))
@@ -15,8 +15,7 @@
 				var/amount = supply[s]
 				for(var/i = 1, i <= amount, i++)
 					new s (pick(T))
-		sleep(-1)
-	qdel()
+	return INITIALIZE_HINT_QDEL
 
 
 /obj/effect/landmark/supplyspawner/weapons
@@ -49,8 +48,7 @@
 				/obj/structure/largecrate/supply/generator = 1,
 				/obj/structure/largecrate/supply/floodlights = 2,
 				/obj/structure/largecrate/supply/supplies/flares = 3,
-				/obj/structure/largecrate/supply/powerloader = 1,
-				/obj/structure/largecrate/machine/recycler = 2
+				/obj/structure/largecrate/supply/powerloader = 1
 				)
 
 /obj/effect/landmark/supplyspawner/turrets
@@ -86,14 +84,13 @@
 	name = "supply crate"
 	var/list/supplies = list()
 
-/obj/structure/largecrate/supply/New()
-	..()
+/obj/structure/largecrate/supply/Initialize()
+	. = ..()
 	if(supplies.len)
 		for(var/s in supplies)
 			var/amount = supplies[s]
 			for(var/i = 1, i <= amount, i++)
 				new s (src)
-	sleep(-1)
 
 /obj/structure/largecrate/supply/weapons
 	name = "weapons chest"
@@ -317,7 +314,7 @@
 		to_chat(user, "<b>!!WARNING!! CONTENTS OF CRATE UNABLE TO BE MOVED ONCE UNPACKAGED!</b>")
 
 /obj/structure/largecrate/machine/attackby(obj/item/W as obj, mob/user as mob)
-	if(istype(W, /obj/item/tool/crowbar) && dir_needed)
+	if(iscrowbar(W) && dir_needed)
 		var/turf/next_turf = get_step(src, dir_needed)
 		if(next_turf.density)
 			to_chat(user, "<span class='warning'>You can't open the crate here, there's not enough room!</span>")
@@ -328,26 +325,15 @@
 				return
 	..()
 
-/obj/structure/largecrate/machine/recycler
-	name = "recycler crate (x1)"
-	desc = "A crate containing one recycler, for removal of trash."
-	dir_needed = 0
-
-/obj/structure/largecrate/machine/recycler/attackby(obj/item/W as obj, mob/user as mob)
-	if(istype(W, /obj/item/tool/crowbar))
-		var/turf/T = get_turf(loc)
-		if(istype(T, /turf/open))
-			new /obj/machinery/wo_recycler (T)
-	..()
 
 /obj/structure/largecrate/machine/autodoc
 	name = "autodoctor machine crate (x1)"
 	desc = "A crate containing one autodoc."
 
 /obj/structure/largecrate/machine/autodoc/attackby(obj/item/W as obj, mob/user as mob)
-	if(istype(W, /obj/item/tool/crowbar))
+	if(iscrowbar(W))
 		var/turf/T = get_turf(loc)
-		if(istype(T, /turf/open))
+		if(isopenturf(T))
 			var/obj/machinery/autodoc/event/E = new (T)
 			var/obj/machinery/autodoc_console/C = new (T)
 			C.loc = get_step(T, EAST)
@@ -360,9 +346,9 @@
 	desc = "A crate containing one medical bodyscanner."
 
 /obj/structure/largecrate/supply/machine/bodyscanner/attackby(obj/item/W as obj, mob/user as mob)
-	if(istype(W, /obj/item/tool/crowbar))
+	if(iscrowbar(W))
 		var/turf/T = get_turf(loc)
-		if(istype(T, /turf/open))
+		if(isopenturf(T))
 			var/obj/machinery/bodyscanner/E = new (T)
 			var/obj/machinery/body_scanconsole/C = new (T)
 			C.loc = get_step(T, EAST)
@@ -374,9 +360,9 @@
 	desc = "A crate containing one medical sleeper."
 
 /obj/structure/largecrate/machine/sleeper/attackby(obj/item/W as obj, mob/user as mob)
-	if(istype(W, /obj/item/tool/crowbar))
+	if(iscrowbar(W))
 		var/turf/T = get_turf(loc)
-		if(istype(T, /turf/open))
+		if(isopenturf(T))
 			var/obj/machinery/sleeper/E = new (T)
 			var/obj/machinery/sleep_console/C = new (T)
 			C.loc = get_step(T, EAST)

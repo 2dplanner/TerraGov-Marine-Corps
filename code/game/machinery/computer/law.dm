@@ -13,7 +13,7 @@
 		set category = "Object"
 		set name = "Access Computer's Internals"
 		set src in oview(1)
-		if(get_dist(src, usr) > 1 || usr.is_mob_restrained() || usr.lying || usr.stat || istype(usr, /mob/living/silicon))
+		if(get_dist(src, usr) > 1 || usr.restrained() || usr.lying || usr.stat || issilicon(usr))
 			return
 
 		opened = !opened
@@ -36,10 +36,10 @@
 
 
 	attack_hand(var/mob/user as mob)
-		if(src.stat & NOPOWER)
+		if(src.machine_stat & NOPOWER)
 			to_chat(usr, "The upload computer has no power!")
 			return
-		if(src.stat & BROKEN)
+		if(src.machine_stat & BROKEN)
 			to_chat(usr, "The upload computer is broken!")
 			return
 
@@ -69,10 +69,10 @@
 
 
 	attack_hand(var/mob/user as mob)
-		if(src.stat & NOPOWER)
+		if(src.machine_stat & NOPOWER)
 			to_chat(usr, "The upload computer has no power!")
 			return
-		if(src.stat & BROKEN)
+		if(src.machine_stat & BROKEN)
 			to_chat(usr, "The upload computer is broken!")
 			return
 

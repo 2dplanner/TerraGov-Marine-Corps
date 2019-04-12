@@ -325,7 +325,7 @@
 
 /obj/structure/device/piano/Topic(href, href_list)
 
-	if(!in_range(src, usr) || issilicon(usr) || !anchored || !usr.canmove || usr.is_mob_restrained())
+	if(!in_range(src, usr) || issilicon(usr) || !anchored || !usr.canmove || usr.restrained())
 		usr << browse(null, "window=piano;size=700x300")
 		onclose(usr, "piano")
 		return
@@ -428,7 +428,7 @@
 	return
 
 /obj/structure/device/piano/attackby(obj/item/O as obj, mob/user as mob)
-	if (istype(O, /obj/item/tool/wrench))
+	if (iswrench(O))
 		if (anchored)
 			playsound(src.loc, 'sound/items/Ratchet.ogg', 25, 1)
 			to_chat(user, "<span class='notice'>You begin to loosen \the [src]'s casters...</span>")

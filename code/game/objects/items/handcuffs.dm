@@ -21,7 +21,7 @@
 /obj/item/handcuffs/attack(mob/living/carbon/C, mob/user)
 	if(!istype(C))
 		return ..()
-	if (!istype(user, /mob/living/carbon/human))
+	if (!ishuman(user))
 		to_chat(user, "<span class='warning'>You don't have the dexterity to do this!</span>")
 		return
 	if ((CLUMSY in usr.mutations) && prob(50))
@@ -46,8 +46,6 @@
 
 		log_combat(user, H, "handcuffed", src, addition="(attempt)")
 		msg_admin_attack("[key_name(user)] attempted to handcuff [key_name(H)]")
-
-		feedback_add_details("handcuffs","H")
 
 		user.visible_message("<span class='notice'>[user] tries to put [src] on [H].</span>")
 		if(do_mob(user, H, cuff_delay, BUSY_ICON_HOSTILE, BUSY_ICON_GENERIC))

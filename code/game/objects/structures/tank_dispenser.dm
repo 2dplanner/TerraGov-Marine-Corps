@@ -75,7 +75,7 @@
 		updateUsrDialog()
 		return
 /*
-	if(istype(I, /obj/item/tool/wrench))
+	if(iswrench(I))
 		if(anchored)
 			to_chat(user, "<span class='notice'>You lean down and unwrench [src].</span>")
 			anchored = 0
@@ -85,7 +85,7 @@
 		return
 */
 /obj/structure/dispenser/Topic(href, href_list)
-	if(usr.stat || usr.is_mob_restrained())
+	if(usr.stat || usr.restrained())
 		return
 	if(Adjacent(usr))
 		usr.set_interaction(src)

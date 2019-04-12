@@ -24,7 +24,7 @@
 	attack_hand(mob/user as mob)
 		user.set_interaction(src)
 
-		var/dat = "Photocopier<BR><BR>"
+		var/dat
 		if(copy || photocopy || bundle)
 			dat += "<a href='byond://?src=\ref[src];remove=1'>Remove Paper</a><BR>"
 			if(toner)
@@ -40,6 +40,10 @@
 		if(!toner)
 			dat +="<BR>Please insert a new toner cartridge!"
 		user << browse(dat, "window=copier")
+
+		var/datum/browser/popup = new(user, "copier", "<div align='center'>Photocopier</div>")
+		popup.set_content(dat)
+		popup.open(FALSE)
 		onclose(user, "copier")
 		return
 
@@ -118,7 +122,7 @@
 			if(!istype(usr,/mob/living/silicon)) return
 			if(toner >= 5)
 				var/mob/living/silicon/tempAI = usr
-				var/obj/item/device/camera/siliconcam/camera = tempAI.aiCamera
+				var/obj/item/camera/siliconcam/camera = tempAI.aiCamera
 
 				if(!camera)
 					return
@@ -162,7 +166,7 @@
 					to_chat(user, "<span class='notice'>You insert the bundle into \the [src].</span>")
 					flick("bigscanner1", src)
 					updateUsrDialog()
-		else if(istype(O, /obj/item/device/toner))
+		else if(istype(O, /obj/item/toner))
 			if(toner == 0)
 				if(user.temporarilyRemoveItemFromInventory(O))
 					qdel(O)
@@ -171,7 +175,7 @@
 					updateUsrDialog()
 			else
 				to_chat(user, "<span class='notice'>This cartridge is not yet ready for replacement! Use up the rest of the toner.</span>")
-		else if(istype(O, /obj/item/tool/wrench))
+		else if(iswrench(O))
 			playsound(loc, 'sound/items/Ratchet.ogg', 25, 1)
 			anchored = !anchored
 			to_chat(user, "<span class='notice'>You [anchored ? "wrench" : "unwrench"] \the [src].</span>")
@@ -228,6 +232,7 @@
 		copy.overlays += img
 	copy.updateinfolinks()
 	toner--
+	copy.update_icon()
 	return copy
 
 
@@ -264,6 +269,6 @@
 	return p
 
 
-/obj/item/device/toner
+/obj/item/toner
 	name = "toner cartridge"
 	icon_state = "tonercartridge"

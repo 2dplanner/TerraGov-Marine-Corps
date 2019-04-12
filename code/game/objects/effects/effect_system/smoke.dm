@@ -71,7 +71,7 @@
 		if(foundsmoke)
 			continue
 		var/obj/effect/particle_effect/smoke/S = new type(T, amount)
-		S.dir = pick(cardinal)
+		S.setDir(pick(cardinal))
 		S.time_to_live = time_to_live
 		if(S.amount>0)
 			S.spread_smoke()
@@ -125,49 +125,55 @@
 	opacity = 0
 	alpha = 145
 
+
 /obj/effect/particle_effect/smoke/tactical/New(loc, oldamount)
-	..()
+	. = ..()
 	for(var/mob/living/M in get_turf(src))
 		affect(M)
+
 
 /obj/effect/particle_effect/smoke/tactical/Move()
-	..()
+	. = ..()
 	for(var/mob/living/M in get_turf(src))
 		affect(M)
 
+
 /obj/effect/particle_effect/smoke/tactical/process()
-	.=..()
+	. = ..()
 	for(var/mob/living/M in get_turf(src))
 		affect(M)
+
 
 /obj/effect/particle_effect/smoke/tactical/Destroy()
 	for(var/mob/living/M in get_turf(src))
 		uncloak_smoke_act(M)
-	..()
+	return ..()
+
 
 /obj/effect/particle_effect/smoke/tactical/affect(var/mob/living/M)
-	if(istype(M))
-		cloak_smoke_act(M)
+	cloak_smoke_act(M)
 
-/obj/effect/particle_effect/smoke/tactical/Crossed(atom/movable/M)
-	..()
-	if(isliving(M))
-		affect(M)
 
-/obj/effect/particle_effect/smoke/tactical/Uncrossed(var/mob/living/M)
-	..()
-	uncloak_smoke_act(M)
+/obj/effect/particle_effect/smoke/tactical/Crossed(atom/movable/AM)
+	. = ..()
+	if(!isliving(AM))
+		return
+	affect(AM)
+
+
+/obj/effect/particle_effect/smoke/tactical/Uncrossed(atom/movable/AM)
+	. = ..()
+	if(!isliving(AM))
+		return
+	uncloak_smoke_act(AM)
+
 
 /obj/effect/particle_effect/smoke/tactical/proc/cloak_smoke_act(var/mob/living/M)
 	if(ishuman(M))
 		var/mob/living/carbon/human/H = M
-		var/obj/item/clothing/gloves/yautja/Y = H.gloves
 		var/obj/item/storage/backpack/marine/satchel/scout_cloak/S = H.back
 		if(H.back)
 			if(istype(S) && S.camo_active)
-				return
-		if(H.gloves)
-			if(istype(Y) && Y.cloaked)
 				return
 		return M.smokecloak_on()
 	return M.smokecloak_on()
@@ -274,7 +280,7 @@
 
 //Xeno acid smoke.
 /obj/effect/particle_effect/smoke/xeno_burn
-	time_to_live = 6
+	time_to_live = 9
 	color = "#86B028" //Mostly green?
 	anchored = 1
 	spread_speed = 7
@@ -298,9 +304,7 @@
 
 /obj/effect/particle_effect/smoke/xeno_burn/affect(var/mob/living/carbon/M)
 	..()
-	if(isXeno(M))
-		return
-	if(isYautja(M) && prob(75))
+	if(isxeno(M))
 		return
 	if(M.stat == DEAD)
 		return
@@ -342,16 +346,14 @@
 
 /obj/effect/particle_effect/smoke/xeno_weak/affect(var/mob/living/carbon/M)
 	..()
-	if(isXeno(M))
-		return
-	if(isYautja(M) && prob(75))
+	if(isxeno(M))
 		return
 	if(M.stat == DEAD)
 		return
 	if(istype(M.buckled, /obj/structure/bed/nest) && M.status_flags & XENO_HOST)
 		return
 
-	var/reagent_amount = rand(4,10) + rand(4,10) //Gaussian. Target number 7.
+	var/reagent_amount = rand(7,9)
 
 	//Gas masks protect from inhalation and face contact effects, even without internals. Breath masks don't for balance reasons
 	if(!istype(M.wear_mask, /obj/item/clothing/mask/gas))
@@ -369,11 +371,11 @@
 			spawn(15)
 				M.coughedtime = 0
 	else
-		M.reagents.add_reagent("xeno_toxin", reagent_amount * 0.5)
-	//Topical damage (neurotoxin on exposed skin)
-	to_chat(M, "<span class='danger'>Your body is going numb, almost as if paralyzed!</span>")
-	if(prob(round(reagent_amount*5))) //Likely to momentarily freeze up/fall due to arms/hands seizing up
-		M.AdjustKnockeddown(0.5)
+		var/bio_vulnerability = CLAMP(1 - M.run_armor_check("chest", "bio"),0,1) //Your bio resist matters now if you have a gas mask
+		if(bio_vulnerability > 0) //Less than perfect resistance means there will be skin absorption
+			M.reagents.add_reagent("xeno_toxin", reagent_amount * 0.3 * bio_vulnerability)
+			//Topical damage (neurotoxin on exposed skin)
+			to_chat(M, "<span class='danger'>Your body goes numb where the gas touches it!</span>")
 
 /////////////////////////////////////////////
 // Smoke spread

@@ -58,10 +58,9 @@
 	origin_tech = "materials=1;biotech=1"
 	attack_verb = list("drilled")
 
-	suicide_act(mob/user)
-		user.visible_message(pick("<span class='danger'>[user] is pressing the [src.name] to \his temple and activating it! It looks like \he's trying to commit suicide.</span>", \
-							"<span class='danger'>[user] is pressing [src.name] to \his chest and activating it! It looks like \he's trying to commit suicide.</span>"))
-		return (BRUTELOSS)
+/obj/item/tool/surgery/surgicaldrill/suicide_act(mob/user)
+	user.visible_message("<span class='danger'>[user] is pressing the [name] to [user.p_their()] [pick("temple","chest")] and activating it! It looks like [user.p_theyre()] trying to commit suicide.</span>")
+	return (BRUTELOSS)
 
 /*
  * Scalpel
@@ -82,11 +81,11 @@
 	origin_tech = "materials=1;biotech=1"
 	attack_verb = list("attacked", "slashed", "stabbed", "sliced", "torn", "ripped", "diced", "cut")
 
-	suicide_act(mob/user)
-		user.visible_message(pick("<span class='danger'>[user] is slitting \his wrists with the [src.name]! It looks like \he's trying to commit suicide.</span>", \
-							"<span class='danger'>[user] is slitting \his throat with the [src.name]! It looks like \he's trying to commit suicide.</span>", \
-							"<span class='danger'>[user] is slitting \his stomach open with the [src.name]! It looks like \he's trying to commit seppuku.</span>"))
-		return (BRUTELOSS)
+/obj/item/tool/surgery/scalpel/suicide_act(mob/user)
+	user.visible_message(pick("<span class='danger'>[user] is slitting [user.p_their()] wrists with the [name]! It looks like [user.p_theyre()] trying to commit suicide.</span>", \
+							"<span class='danger'>[user] is slitting [user.p_their()] throat with the [name]! It looks like [user.p_theyre()] trying to commit suicide.</span>", \
+							"<span class='danger'>[user] is slitting [user.p_their()] stomach open with the [name]! It looks like [user.p_theyre()] trying to commit seppuku.</span>"))
+	return (BRUTELOSS)
 
 /*
  * Researchable Scalpels
@@ -164,74 +163,6 @@
 	w_class = 2.0
 	attack_verb = list("attacked", "hit", "bludgeoned")
 
-/*
- * Predator Retractor
- */
-/obj/item/tool/surgery/retractor/predatorretractor
-	name = "opener"
-	desc = "Retracts stuff."
-	icon_state = "predator_retractor"
-
-/*
- * Predator Hemostat
- */
-/obj/item/tool/surgery/hemostat/predatorhemostat
-	name = "pincher"
-	desc = "You think you have seen this before."
-	icon_state = "predator_hemostat"
-
-/*
- * Predator Cautery
- */
-/obj/item/tool/surgery/cautery/predatorcautery
-	name = "cauterizer"
-	desc = "This stops bleeding."
-	icon_state = "predator_cautery"
-
-/*
- * Predator Surgical Drill
- */
-/obj/item/tool/surgery/surgicaldrill/predatorsurgicaldrill
-	name = "bone drill"
-	desc = "You can drill using this item. You dig?"
-	icon_state = "predator_drill"
-
-/*
- * Predator Scalpel
- */
-/obj/item/tool/surgery/scalpel/predatorscalpel
-	name = "cutter"
-	desc = "Cut, cut, and once more cut."
-	icon_state = "predator_scalpel"
-
-/*
- * Predator Saw
- */
-/obj/item/tool/surgery/circular_saw/predatorbonesaw
-	name = "bone saw"
-	desc = "For heavy duty cutting."
-	icon_state = "predator_bonesaw"
-
-/*
- * Predator Bonegel
- */
-/obj/item/tool/surgery/bonegel/predatorbonegel
-	name = "gel gun"
-	icon_state = "predator_bone-gel"
-
-/*
- * Predator FixOVein
- */
-/obj/item/tool/surgery/FixOVein/predatorFixOVein
-	name = "vein fixer"
-	icon_state = "predator_fixovein"
-
-/*
- * Predator Bonesetter
- */
-/obj/item/tool/surgery/bonesetter/predatorbonesetter
-	name = "bone placer"
-	icon_state = "predator_bonesetter"
 
 //XENO AUTOPSY TOOL
 
@@ -270,7 +201,7 @@
 	set src in usr*/
 	if(resetting)
 		to_chat(usr, "Tool is currently returning to factory default.  If you have been waiting, try running the reset again.")
-	if(!isXeno(T))
+	if(!isxeno(T))
 		to_chat(usr, "What are you, some sort of fucking MONSTER?")
 		return
 	if(T.health > 0)

@@ -2,18 +2,22 @@
 	icon = 'icons/obj/structures/structures.dmi'
 	var/climbable
 	var/climb_delay = 50
-	var/breakable
+	var/breakable = TRUE
 	var/parts
 	var/flags_barrier = 0
 	anchored = TRUE
 
+	var/damage = 0
+	var/damage_cap = 500 //The point where things start breaking down.
+	var/health
+
 /obj/structure/New()
 	..()
-	structure_list += src
+	GLOB.structure_list += src
 
 /obj/structure/Destroy()
 	. = ..()
-	structure_list -= src
+	GLOB.structure_list -= src
 
 /obj/structure/proc/destroy_structure(deconstruct)
 	if(parts)
@@ -23,6 +27,9 @@
 
 /obj/structure/proc/handle_barrier_chance(mob/living/M)
 	return FALSE
+
+/obj/structure/proc/update_health()
+	return
 
 /obj/structure/attack_hand(mob/user)
 	..()
@@ -34,13 +41,13 @@
 
 /obj/structure/attackby(obj/item/C as obj, mob/user as mob)
 	. = ..()
-	if(istype(C, /obj/item/tool/pickaxe/plasmacutter) && !user.action_busy && breakable && !unacidable)
+	if(istype(C, /obj/item/tool/pickaxe/plasmacutter) && !user.action_busy && breakable && !CHECK_BITFIELD(resistance_flags, UNACIDABLE|INDESTRUCTIBLE))
 		var/obj/item/tool/pickaxe/plasmacutter/P = C
 		if(!P.start_cut(user, name, src))
 			return
 		if(do_after(user, P.calc_delay(user), TRUE, 5, BUSY_ICON_HOSTILE) && P)
 			P.cut_apart(user, name, src)
-			qdel()
+			qdel(src)
 		return
 
 //Default "structure" proc. This should be overwritten by sub procs.
@@ -61,6 +68,8 @@
 	return
 
 /obj/structure/ex_act(severity)
+	if(CHECK_BITFIELD(resistance_flags, INDESTRUCTIBLE))
+		return
 	switch(severity)
 		if(1.0)
 			qdel(src)
@@ -72,8 +81,8 @@
 		if(3.0)
 			return
 
-/obj/structure/New()
-	..()
+/obj/structure/Initialize()
+	. = ..()
 	if(climbable)
 		verbs += /obj/structure/proc/climb_on
 
@@ -225,9 +234,7 @@
 
 			if(affecting)
 				to_chat(M, "<span class='danger'>You land heavily on your [affecting.display_name]!</span>")
-				affecting.take_damage(damage, 0)
-				if(affecting.parent)
-					affecting.parent.add_autopsy_data("Misadventure", damage)
+				affecting.take_damage_limb(damage)
 			else
 				to_chat(H, "<span class='danger'>You land heavily!</span>")
 				H.apply_damage(damage, BRUTE)
@@ -241,12 +248,29 @@
 		return FALSE
 	if(!Adjacent(user) || !isturf(user.loc))
 		return FALSE
-	if(user.is_mob_restrained() || user.buckled)
+	if(user.restrained() || user.buckled)
 		to_chat(user, "<span class='notice'>You need your hands and legs free for this.</span>")
 		return FALSE
-	if(user.is_mob_incapacitated(TRUE) || user.lying)
+	if(user.incapacitated(TRUE) || user.lying)
 		return FALSE
 	if(issilicon(user))
 		to_chat(user, "<span class='notice'>You need hands for this.</span>")
 		return FALSE
 	return TRUE
+
+
+//Damage
+/obj/structure/proc/take_damage(dam)
+	if(!breakable)
+		return
+
+	if(!dam)
+		return
+
+	damage = max(0, damage + dam)
+
+	if(damage >= damage_cap)
+		playsound(src, 'sound/effects/metal_crash.ogg', 35)
+		qdel(src)
+	else
+		update_icon()

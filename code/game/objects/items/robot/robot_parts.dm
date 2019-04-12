@@ -57,8 +57,8 @@
 	icon_state = "head"
 	construction_time = 350
 	construction_cost = list("metal"=25000)
-	var/obj/item/device/flash/flash1 = null
-	var/obj/item/device/flash/flash2 = null
+	var/obj/item/flash/flash1 = null
+	var/obj/item/flash/flash2 = null
 
 /obj/item/robot_parts/robot_suit
 	name = "robot endoskeleton"
@@ -97,7 +97,6 @@
 	if(src.l_arm && src.r_arm)
 		if(src.l_leg && src.r_leg)
 			if(src.chest && src.head)
-				feedback_inc("cyborg_frames_built",1)
 				return 1
 	return 0
 
@@ -147,8 +146,8 @@
 		else
 			to_chat(user, "<span class='notice'>You need to attach a flash to it first!</span>")
 
-	if(istype(W, /obj/item/device/mmi))
-		var/obj/item/device/mmi/M = W
+	if(istype(W, /obj/item/mmi))
+		var/obj/item/mmi/M = W
 		if(check_completion())
 			if(!istype(loc,/turf))
 				to_chat(user, "<span class='warning'>You can't put \the [W] in, the frame has to be standing on the ground to be perfectly precise.</span>")
@@ -159,7 +158,7 @@
 			if(!M.brainmob.key)
 				var/ghost_can_reenter = 0
 				if(M.brainmob.mind)
-					for(var/mob/dead/observer/G in player_list)
+					for(var/mob/dead/observer/G in GLOB.player_list)
 						if(G.can_reenter_corpse && G.mind == M.brainmob.mind)
 							ghost_can_reenter = 1
 							break
@@ -169,10 +168,6 @@
 
 			if(M.brainmob.stat == DEAD)
 				to_chat(user, "<span class='warning'>Sticking a dead [W] into the frame would sort of defeat the purpose.</span>")
-				return
-
-			if(jobban_isbanned(M.brainmob, "Cyborg"))
-				to_chat(user, "<span class='warning'>This [W] does not seem to fit.</span>")
 				return
 
 			var/mob/living/silicon/robot/O = new /mob/living/silicon/robot(get_turf(loc), unfinished = 1)
@@ -187,9 +182,6 @@
 
 			M.brainmob.mind.transfer_to(O)
 
-			if(O.mind && O.mind.special_role)
-				O.mind.store_memory("In case you look at this after being borged, the objectives are only here until I find a way to make them not show up for you, as I can't simply delete them without screwing up round-end reporting. --NeoFite")
-
 			O.job = "Cyborg"
 
 			O.cell = chest.cell
@@ -202,8 +194,6 @@
 				cell_component.wrapped = O.cell
 				cell_component.installed = 1
 
-			feedback_inc("cyborg_birth",1)
-			callHook("borgify", list(O))
 			O.Namepick()
 
 			qdel(src)
@@ -231,7 +221,7 @@
 			if(user.transferItemToLoc(W, src))
 				cell = W
 				to_chat(user, "<span class='notice'>You insert the cell!</span>")
-	if(istype(W, /obj/item/stack/cable_coil))
+	if(iscablecoil(W))
 		if(src.wires)
 			to_chat(user, "<span class='notice'>You have already inserted wire!</span>")
 			return
@@ -244,7 +234,7 @@
 
 /obj/item/robot_parts/head/attackby(obj/item/W as obj, mob/user as mob)
 	..()
-	if(istype(W, /obj/item/device/flash))
+	if(istype(W, /obj/item/flash))
 		if(istype(user,/mob/living/silicon/robot))
 			to_chat(user, "<span class='warning'>How do you propose to do that?</span>")
 			return

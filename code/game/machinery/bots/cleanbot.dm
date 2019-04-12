@@ -37,13 +37,12 @@
 	should_patrol = 1
 
 	src.botcard = new /obj/item/card/id(src)
-	var/datum/job/J = RoleAuthority ? RoleAuthority.roles_by_path[/datum/job/logistics/tech/maint] : new /datum/job/logistics/tech/maint
-	botcard.access = J.get_access()
+	botcard.access = ALL_MARINE_ACCESS
 
 	src.locked = 0 // Start unlocked so roboticist can set them to patrol.
 
-	if(radio_controller)
-		radio_controller.add_object(src, beacon_freq, filter = RADIO_NAVBEACONS)
+	if(SSradio)
+		SSradio.add_object(src, beacon_freq, filter = RADIO_NAVBEACONS)
 
 	start_processing()
 
@@ -128,7 +127,7 @@ text("<A href='?src=\ref[src];operation=oddbutton'>[src.oddbutton ? "Yes" : "No"
 			src.updateUsrDialog()
 
 /obj/machinery/bot/cleanbot/attackby(obj/item/W, mob/user as mob)
-	if (istype(W, /obj/item/card/id)||istype(W, /obj/item/device/pda))
+	if (istype(W, /obj/item/card/id))
 		if(src.allowed(usr) && !open && !emagged)
 			src.locked = !src.locked
 			to_chat(user, "<span class='notice'>You [ src.locked ? "lock" : "unlock"] the [src] behaviour controls.</span>")
@@ -186,7 +185,7 @@ text("<A href='?src=\ref[src];operation=oddbutton'>[src.oddbutton ? "Yes" : "No"
 			return
 
 		if (!patrol_path || patrol_path.len < 1)
-			var/datum/radio_frequency/frequency = radio_controller.return_frequency(beacon_freq)
+			var/datum/radio_frequency/frequency = SSradio.return_frequency(beacon_freq)
 
 			if(!frequency) return
 
@@ -305,7 +304,7 @@ text("<A href='?src=\ref[src];operation=oddbutton'>[src.oddbutton ? "Yes" : "No"
 
 	new /obj/item/reagent_container/glass/bucket(Tsec)
 
-	new /obj/item/device/assembly/prox_sensor(Tsec)
+	new /obj/item/assembly/prox_sensor(Tsec)
 
 	if (prob(50))
 		new /obj/item/robot_parts/l_arm(Tsec)

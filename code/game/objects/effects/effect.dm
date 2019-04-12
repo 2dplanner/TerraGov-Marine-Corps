@@ -1,11 +1,12 @@
 /obj/effect
+	resistance_flags = UNACIDABLE
 
-/obj/effect/New()
-	..()
-	effect_list += src
+
+/obj/effect/Initialize()
+	. = ..()
+	GLOB.effect_list += src
+
 
 /obj/effect/Destroy()
 	. = ..()
-	effect_list -= src
-
-
+	GLOB.effect_list -= src

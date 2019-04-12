@@ -85,7 +85,7 @@
 		src.amount += loaded
 		to_chat(user, "<span class='notice'>You load [loaded] tiles into the floorbot. He now contains [src.amount] tiles.</span>")
 		src.updateicon()
-	else if(istype(W, /obj/item/card/id)||istype(W, /obj/item/device/pda))
+	else if(istype(W, /obj/item/card/id))
 		if(src.allowed(usr) && !open && !emagged)
 			src.locked = !src.locked
 			to_chat(user, "<span class='notice'>You [src.locked ? "lock" : "unlock"] the [src] behaviour controls.</span>")
@@ -160,7 +160,7 @@
 			if(src.maketiles)
 				if(src.target == null || !src.target)
 					for(var/obj/item/stack/sheet/metal/M in view(7, src))
-						if(!(M in floorbottargets) && M != src.oldtarget && M.amount == 1 && !(istype(M.loc, /turf/closed)))
+						if(!(M in floorbottargets) && M != src.oldtarget && M.amount == 1 && !isclosedturf(M.loc))
 							src.oldtarget = M
 							src.target = M
 							break
@@ -180,7 +180,7 @@
 						break
 			*/
 			var/turf/T = get_step(src, targetdirection)
-			if(istype(T, /turf/open/space))
+			if(isspaceturf(T))
 				src.oldtarget = T
 				src.target = T
 		if(!src.target || src.target == null)
@@ -191,7 +191,7 @@
 					break
 		if((!src.target || src.target == null ) && src.improvefloors)
 			for (var/turf/open/floor/F in view(7,src))
-				if(!(F in floorbottargets) && F != src.oldtarget && F.icon_state == "Floor1" && !(istype(F, /turf/open/floor/plating)))
+				if(!(F in floorbottargets) && F != src.oldtarget && F.icon_state == "Floor1" && !F.is_plating())
 					src.oldtarget = F
 					src.target = F
 					break
@@ -261,16 +261,16 @@
 
 
 /obj/machinery/bot/floorbot/proc/repair(var/turf/target)
-	if(istype(target, /turf/open/space/))
+	if(isspaceturf(target))
 		if(target.loc.name == "Space")
 			return
-	else if(!istype(target, /turf/open/floor))
+	else if(!isfloorturf(target))
 		return
 	if(src.amount <= 0)
 		return
 	src.anchored = 1
 	src.icon_state = "floorbot-c"
-	if(istype(target, /turf/open/space/))
+	if(isspaceturf(target))
 		visible_message("<span class='warning'> [src] begins to repair the hole</span>")
 		var/obj/item/stack/tile/plasteel/T = new /obj/item/stack/tile/plasteel
 		src.repairing = 1
@@ -346,7 +346,7 @@
 	var/obj/item/storage/toolbox/mechanical/N = new /obj/item/storage/toolbox/mechanical(Tsec)
 	N.contents = list()
 
-	new /obj/item/device/assembly/prox_sensor(Tsec)
+	new /obj/item/assembly/prox_sensor(Tsec)
 
 	if (prob(50))
 		new /obj/item/robot_parts/l_arm(Tsec)

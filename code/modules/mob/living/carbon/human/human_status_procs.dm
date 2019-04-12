@@ -34,6 +34,18 @@
 			return
 	return ..()
 
+/mob/living/carbon/human/Losebreath(amount, forced = FALSE)
+	if(!(species.species_flags & NO_BREATHE) || forced)
+		return ..()
+
+/mob/living/carbon/human/adjust_Losebreath(amount, forced = FALSE)
+	if(!(species.species_flags & NO_BREATHE) || forced)
+		return ..()
+
+/mob/living/carbon/human/set_Losebreath(amount, forced = FALSE)
+	if(!(species.species_flags & NO_BREATHE) || forced)
+		return ..()
+
 /mob/living/carbon/human/Stun(amount)
 	if(HULK in mutations)
 		return
@@ -48,3 +60,8 @@
 	if(HULK in mutations)
 		return
 	..()
+
+/mob/living/carbon/human/vomit()
+	if(species.species_flags & IS_SYNTHETIC)
+		return //Machines don't throw up.
+	return ..()

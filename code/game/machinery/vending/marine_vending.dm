@@ -48,7 +48,7 @@
 
 /obj/machinery/vending/marine/select_gamemode_equipment(gamemode)
 	var/products2[]
-	switch(map_tag)
+	switch(SSmapping.config.map_name)
 		if(MAP_ICE_COLONY)
 			products2 = list(
 						/obj/item/clothing/mask/rebreather/scarf = 10,
@@ -58,11 +58,11 @@
 
 /obj/machinery/vending/marine/New()
 	..()
-	marine_vendors.Add(src)
+	GLOB.marine_vendors.Add(src)
 
 /obj/machinery/vending/marine/Destroy()
 	. = ..()
-	marine_vendors.Remove(src)
+	GLOB.marine_vendors.Remove(src)
 
 /obj/machinery/vending/marine/attackby(obj/item/W, mob/user)
 	if(istype(W, /obj/item/weapon/gun))
@@ -112,20 +112,24 @@
 					/obj/item/weapon/gun/shotgun/pump = 10,
 					// /obj/item/weapon/gun/shotgun/combat = 1,
 					/obj/item/explosive/mine = 2,
-					/obj/item/storage/box/nade_box = 2,
+					/obj/item/storage/box/nade_box = 1,
+					/obj/item/storage/box/nade_box/impact = 1,
 					/obj/item/weapon/gun/energy/lasgun/M43 = 5,
 					/obj/item/explosive/grenade/frag/m15 = 2,
 					/obj/item/explosive/grenade/incendiary = 4,
 					/obj/item/explosive/grenade/smokebomb = 5,
 					/obj/item/explosive/grenade/cloakbomb = 3,
 					/obj/item/storage/box/m94 = 30,
-					/obj/item/device/flashlight/combat = 5,
+					/obj/item/flashlight/combat = 5,
 					/obj/item/clothing/mask/gas = 10
 					)
 
 	contraband = list(
+					/obj/item/storage/box/nade_box/HIDP = 1,
+					/obj/item/storage/box/nade_box/M15 = 1,
 					/obj/item/weapon/gun/smg/ppsh = 4,
 					/obj/item/weapon/gun/shotgun/double = 2,
+					/obj/item/weapon/gun/shotgun/pump/bolt = 2,
 					/obj/item/weapon/gun/smg/m39/elite = 0,
 					/obj/item/weapon/gun/rifle/m41aMK1 = 0,
 					/obj/item/weapon/gun/rifle/m41a/elite = 0,
@@ -154,12 +158,12 @@
 
 /obj/machinery/vending/marine/cargo_guns/New()
 	..()
-	cargo_guns_vendors.Add(src)
-	marine_vendors.Remove(src)
+	GLOB.cargo_guns_vendors.Add(src)
+	GLOB.marine_vendors.Remove(src)
 
 /obj/machinery/vending/marine/cargo_guns/Destroy()
 	. = ..()
-	cargo_guns_vendors.Remove(src)
+	GLOB.cargo_guns_vendors.Remove(src)
 
 
 
@@ -209,6 +213,7 @@
 	contraband = list(
 					/obj/item/ammo_magazine/smg/ppsh/ = 20,
 					/obj/item/ammo_magazine/smg/ppsh/extended = 4,
+					/obj/item/ammo_magazine/rifle/bolt = 10,
 					/obj/item/ammo_magazine/sniper = 0,
 					/obj/item/ammo_magazine/sniper/incendiary = 0,
 					/obj/item/ammo_magazine/sniper/flak = 0,
@@ -236,16 +241,16 @@
 
 /obj/machinery/vending/marine/cargo_ammo/New()
 	..()
-	cargo_ammo_vendors.Add(src)
-	marine_vendors.Remove(src)
+	GLOB.cargo_ammo_vendors.Add(src)
+	GLOB.marine_vendors.Remove(src)
 
 /obj/machinery/vending/marine/cargo_ammo/Destroy()
 	. = ..()
-	cargo_ammo_vendors.Remove(src)
+	GLOB.cargo_ammo_vendors.Remove(src)
 
 /obj/machinery/vending/lasgun
 	name = "ColMarTech Lasgun Field Charger"
-	desc = "An automated power cell dispenser and charger. Used to recharge energy weapon power cells, including in the field. Has an internal battery that charges off the power grid."
+	desc = "An automated power cell dispenser and charger. Used to recharge energy weapon power cells, including in the field. Has an internal battery that charges off the power grid when wrenched down."
 	icon_state = "lascharger"
 	icon_vend = "lascharger-vend"
 	icon_deny = "lascharger-denied"
@@ -256,8 +261,8 @@
 	anchored = FALSE
 	idle_power_usage = 1
 	vend_power_usage = 50
-	machine_current_charge = 20000 //integrated battery for recharging energy weapons. Normally 10000.
-	machine_max_charge = 20000
+	machine_current_charge = 50000 //integrated battery for recharging energy weapons. Normally 10000.
+	machine_max_charge = 50000
 
 	product_ads = "Lasgun running low? Recharge here!;Need a charge?;Power up!;Electrifying!;Empower yourself!"
 	products = list(
@@ -361,7 +366,6 @@
 					/obj/item/reagent_container/food/snacks/mre_pack/meal2 = 15,
 					/obj/item/reagent_container/food/snacks/mre_pack/meal3 = 15,
 					/obj/item/reagent_container/food/snacks/mre_pack/meal4 = 15,
-					/obj/item/reagent_container/food/snacks/mre_pack/meal5 = 15,
 					/obj/item/reagent_container/food/snacks/mre_pack/meal6 = 15,
 					/obj/item/storage/box/MRE = 10,
 					/obj/item/reagent_container/food/drinks/flask = 5)
@@ -370,7 +374,8 @@
 					/obj/item/reagent_container/food/snacks/mre_pack/xmas1 = 25,
 					/obj/item/reagent_container/food/snacks/mre_pack/xmas2 = 25,
 					/obj/item/reagent_container/food/snacks/mre_pack/xmas3 = 25)*/
-	contraband = list(/obj/item/reagent_container/food/drinks/flask/marine = 10)
+	contraband = list(/obj/item/reagent_container/food/drinks/flask/marine = 10,
+					/obj/item/reagent_container/food/snacks/mre_pack/meal5 = 15)
 	vend_delay = 15
 	//product_slogans = "Standard Issue Marine food!;It's good for you, and not the worst thing in the world.;Just fucking eat it.;"
 	product_ads = "Try the cornbread.;Try the pizza.;Try the pasta.;Try the tofu, wimp.;Try the pork."
@@ -410,7 +415,7 @@
 					/obj/item/stack/medical/advanced/ointment = 6,
 					/obj/item/stack/medical/ointment = 8,
 					/obj/item/stack/medical/splint = 2,
-					/obj/item/device/healthanalyzer = 3,
+					/obj/item/healthanalyzer = 3,
 					/obj/item/bodybag/cryobag = 2)
 
 	contraband = list(/obj/item/reagent_container/hypospray/autoinjector/sleeptoxin =3)
@@ -455,13 +460,13 @@
 
 	products = list(
 						/obj/item/clothing/under/marine/medic = 4,
-						/obj/item/clothing/head/helmet/marine/medic = 4,
-						/obj/item/storage/backpack/marine/medic = 4,
-						/obj/item/storage/backpack/marine/satchel/medic = 4,
-						/obj/item/device/encryptionkey/med = 4,
+						/obj/item/clothing/head/helmet/marine/corpsman = 4,
+						/obj/item/storage/backpack/marine/corpsman = 4,
+						/obj/item/storage/backpack/marine/satchel/corpsman = 4,
+						/obj/item/encryptionkey/med = 4,
 						/obj/item/storage/belt/medical = 4,
 						/obj/item/bodybag/cryobag = 4,
-						/obj/item/device/healthanalyzer = 4,
+						/obj/item/healthanalyzer = 4,
 						/obj/item/clothing/glasses/hud/health = 4,
 						/obj/item/storage/firstaid/regular = 4,
 						/obj/item/storage/firstaid/adv = 4,
@@ -525,6 +530,7 @@
 					/obj/item/storage/box/spec/heavy_grenadier = 1,
 					/obj/item/storage/box/spec/sniper = 1,
 					/obj/item/storage/box/spec/scout = 1,
+					/obj/item/storage/box/spec/scoutshotgun = 1,
 					/obj/item/storage/box/spec/pyro = 1
 			)
 	prices = list()
@@ -606,12 +612,12 @@
 						/obj/item/clothing/suit/storage/marine/leader = 1,
 						/obj/item/clothing/head/helmet/marine/leader = 1,
 						/obj/item/clothing/tie/storage/webbing = 1,
-						/obj/item/device/squad_beacon = 3,
-						/obj/item/device/squad_beacon/bomb = 1,
+						/obj/item/squad_beacon = 3,
+						/obj/item/squad_beacon/bomb = 1,
 						/obj/item/explosive/plastique = 1,
 						/obj/item/explosive/grenade/smokebomb = 3,
-						/obj/item/device/binoculars/tactical = 1,
-						/obj/item/device/motiondetector = 1,
+						/obj/item/binoculars/tactical = 1,
+						/obj/item/motiondetector = 1,
 						/obj/item/ammo_magazine/pistol/hp = 2,
 						/obj/item/ammo_magazine/pistol/ap = 1,
 						/obj/item/storage/backpack/marine/satchel = 2,
@@ -621,13 +627,13 @@
 						/obj/item/storage/pouch/general/large = 1,
 						/obj/item/storage/pouch/pistol = 1,
 						/obj/item/clothing/mask/gas = 1,
-						/obj/item/device/whistle = 1,
+						/obj/item/whistle = 1,
 						/obj/item/storage/box/zipcuffs = 2
 					)
 
 /obj/machinery/vending/marine_leader/select_gamemode_equipment(gamemode)
 	var/products2[]
-	switch(map_tag)
+	switch(SSmapping.config.map_name)
 		if(MAP_ICE_COLONY)
 			products2 = list( /obj/item/map/ice_colony_map = 3)
 		if(MAP_BIG_RED)
@@ -682,11 +688,11 @@
 
 /obj/machinery/vending/attachments/New()
 	..()
-	attachment_vendors.Add(src)
+	GLOB.attachment_vendors.Add(src)
 
 /obj/machinery/vending/attachments/Destroy()
 	. = ..()
-	attachment_vendors.Remove(src)
+	GLOB.attachment_vendors.Remove(src)
 
 
 
@@ -763,26 +769,26 @@
 	if(squad_tag != null) //probably some better way to slide this in but no sleep is no sleep.
 		switch(squad_tag)
 			if("Alpha")
-				products2 = list(/obj/item/device/radio/headset/almayer/marine/alpha = 20,
+				products2 = list(/obj/item/radio/headset/almayer/marine/alpha = 20,
 								/obj/item/clothing/gloves/marine/alpha = 10)
 			if("Bravo")
-				products2 = list(/obj/item/device/radio/headset/almayer/marine/bravo = 20,
+				products2 = list(/obj/item/radio/headset/almayer/marine/bravo = 20,
 								/obj/item/clothing/gloves/marine/bravo = 10)
 			if("Charlie")
-				products2 = list(/obj/item/device/radio/headset/almayer/marine/charlie = 20,
+				products2 = list(/obj/item/radio/headset/almayer/marine/charlie = 20,
 								/obj/item/clothing/gloves/marine/charlie = 10)
 			if("Delta")
-				products2 = list(/obj/item/device/radio/headset/almayer/marine/delta = 20,
+				products2 = list(/obj/item/radio/headset/almayer/marine/delta = 20,
 								/obj/item/clothing/gloves/marine/delta = 10)
 	else
-		products2 = list(/obj/item/device/radio/headset/almayer = 10,
+		products2 = list(/obj/item/radio/headset/almayer = 10,
 						/obj/item/clothing/gloves/marine = 10)
 	build_inventory(products2)
-	marine_vendors.Add(src)
+	GLOB.marine_vendors.Add(src)
 
 
 /obj/machinery/vending/uniform_supply/Destroy()
 	. = ..()
-	marine_vendors.Remove(src)
+	GLOB.marine_vendors.Remove(src)
 
 

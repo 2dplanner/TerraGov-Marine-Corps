@@ -7,10 +7,9 @@
 	icon = 'icons/Marine/mortar.dmi'
 	icon_state = "mortar_m402"
 	anchored = 1
-	unacidable = 1
+	resistance_flags = UNACIDABLE|INDESTRUCTIBLE
 	density = 1
 	layer = ABOVE_MOB_LAYER //So you can't hide it under corpses
-	flags_atom = RELAY_CLICK
 	var/targ_x = 0 //Initial target coordinates
 	var/targ_y = 0
 	var/offset_x = 0 //Automatic offset from target
@@ -24,9 +23,6 @@
 	var/fixed = 0 //If set to 1, can't unanchor and move the mortar, used for map spawns and WO
 
 /obj/structure/mortar/attack_hand(mob/user as mob)
-	if(isYautja(user))
-		to_chat(user, "<span class='warning'>You kick [src] but nothing happens.</span>")
-		return
 	if(user.mind && user.mind.cm_skills && user.mind.cm_skills.engineer < SKILL_ENGINEER_ENGI)
 		user.visible_message("<span class='notice'>[user] fumbles around figuring out how to use [src].</span>",
 		"<span class='notice'>You fumble around figuring out how to use [src].</span>")
@@ -118,13 +114,13 @@
 			"<span class='notice'>You fumble around figuring out how to fire [src].</span>")
 			var/fumbling_time = 30 * ( SKILL_ENGINEER_ENGI - user.mind.cm_skills.engineer )
 			if(!do_after(user, fumbling_time, TRUE, 5, BUSY_ICON_BUILD)) return
-		if(isSynth(user) && !CONFIG_GET(flag/allow_synthetic_gun_use))
+		if(issynth(user) && !CONFIG_GET(flag/allow_synthetic_gun_use))
 			to_chat(user, "<span class='warning'>Your programming restricts operating heavy weaponry.</span>")
 			return
 		if(busy)
 			to_chat(user, "<span class='warning'>Someone else is currently using [src].</span>")
 			return
-		if(z != 1)
+		if(!is_ground_level(z))
 			to_chat(user, "<span class='warning'>You cannot fire [src] here.</span>")
 			return
 		if(targ_x == 0 && targ_y == 0) //Mortar wasn't set
@@ -146,7 +142,7 @@
 		if(do_after(user, 15, TRUE, 5, BUSY_ICON_HOSTILE))
 			user.visible_message("<span class='notice'>[user] loads \a [mortar_shell.name] into [src].</span>",
 			"<span class='notice'>You load \a [mortar_shell.name] into [src].</span>")
-			visible_message("\icon[src] <span class='danger'>The [name] fires!</span>")
+			visible_message("[icon2html(src, viewers(src))] <span class='danger'>The [name] fires!</span>")
 			user.transferItemToLoc(mortar_shell, src)
 			playsound(loc, 'sound/weapons/gun_mortar_fire.ogg', 50, 1)
 			busy = 0
@@ -169,7 +165,7 @@
 		else
 			busy = 0
 
-	if(istype(O, /obj/item/tool/wrench))
+	if(iswrench(O))
 		if(user.mind && user.mind.cm_skills && user.mind.cm_skills.engineer < SKILL_ENGINEER_ENGI)
 			user.visible_message("<span class='notice'>[user] fumbles around figuring out how to undeploy [src].</span>",
 			"<span class='notice'>You fumble around figuring out how to undeploy [src].</span>")
@@ -194,9 +190,6 @@
 			new /obj/item/mortar_kit(loc)
 			qdel(src)
 
-//Don't allow blowing those up, so Marine nades don't fuck them
-/obj/structure/mortar/ex_act(severity)
-	return
 
 /obj/structure/mortar/fixed
 	desc = "A manual, crew-operated mortar system intended to rain down 80mm goodness on anything it's aimed at. Uses manual targetting dials. Insert round to fire. This one is bolted and welded into the ground."
@@ -208,12 +201,9 @@
 	desc = "A manual, crew-operated mortar system intended to rain down 80mm goodness on anything it's aimed at. Needs to be set down first"
 	icon = 'icons/Marine/mortar.dmi'
 	icon_state = "mortar_m402_carry"
-	unacidable = 1
+	resistance_flags = UNACIDABLE|INDESTRUCTIBLE
 	w_class = 5 //No dumping this in a backpack. Carry it, fatso
 
-//Don't allow blowing those up, so Marine nades don't fuck them
-/obj/item/mortar_kit/ex_act(severity)
-	return
 
 /obj/item/mortar_kit/attack_self(mob/user)
 
@@ -222,7 +212,7 @@
 		"<span class='notice'>You fumble around figuring out how to deploy [src].</span>")
 		var/fumbling_time = 50 * ( SKILL_ENGINEER_ENGI - user.mind.cm_skills.engineer )
 		if(!do_after(user, fumbling_time, TRUE, 5, BUSY_ICON_BUILD)) return
-	if(user.z != 1)
+	if(!is_ground_level(user.z))
 		to_chat(user, "<span class='warning'>You cannot deploy [src] here.</span>")
 		return
 	var/area/A = get_area(src)
@@ -237,7 +227,7 @@
 		"<span class='notice'>You deploy [src].")
 		playsound(loc, 'sound/weapons/gun_mortar_unpack.ogg', 25, 1)
 		var/obj/structure/mortar/M = new /obj/structure/mortar(get_turf(user))
-		M.dir = user.dir
+		M.setDir(user.dir)
 		qdel(src)
 
 /obj/item/mortal_shell
@@ -313,17 +303,17 @@
 /obj/item/mortal_shell/flare/detonate(var/turf/T)
 
 	//TODO: Add flare sound
-	new /obj/item/device/flashlight/flare/on/illumination(T)
+	new /obj/item/flashlight/flare/on/illumination(T)
 	playsound(T, 'sound/weapons/gun_flare.ogg', 50, 1, 4)
 
 //Special flare subtype for the illumination flare shell
 //Acts like a flare, just even stronger, and set length
-/obj/item/device/flashlight/flare/on/illumination
+/obj/item/flashlight/flare/on/illumination
 
 	name = "illumination flare"
 	desc = "It's really bright, and unreachable."
 	icon_state = "" //No sprite
-	invisibility = 101 //Can't be seen or found, it's "up in the sky"
+	invisibility = INVISIBILITY_MAXIMUM //Can't be seen or found, it's "up in the sky"
 	mouse_opacity = 0
 	brightness_on = 7 //Way brighter than most lights
 
@@ -332,12 +322,12 @@
 		..()
 		fuel = rand(400, 500) // Half the duration of a flare, but justified since it's invincible
 
-/obj/item/device/flashlight/flare/on/illumination/turn_off()
+/obj/item/flashlight/flare/on/illumination/turn_off()
 
 	..()
 	qdel(src)
 
-/obj/item/device/flashlight/flare/on/illumination/ex_act(severity)
+/obj/item/flashlight/flare/on/illumination/ex_act(severity)
 
 	return //Nope
 
@@ -386,6 +376,6 @@
 	new /obj/item/mortal_shell/flare(src)
 	new /obj/item/mortal_shell/smoke(src)
 	new /obj/item/mortal_shell/smoke(src)
-	new /obj/item/device/encryptionkey/engi(src)
-	new /obj/item/device/encryptionkey/engi(src)
-	new /obj/item/device/binoculars/tactical/range(src)
+	new /obj/item/encryptionkey/engi(src)
+	new /obj/item/encryptionkey/engi(src)
+	new /obj/item/binoculars/tactical/range(src)

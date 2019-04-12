@@ -27,13 +27,13 @@
 		return
 	user.set_interaction(src)
 	var/dat
-	dat += "<B>Prisoner Implant Manager System</B><BR>"
+	dat += "<BR>"
 	if(screen == 0)
 		dat += "<HR><A href='?src=\ref[src];lock=1'>Unlock Console</A>"
 	else if(screen == 1)
 		dat += "<HR>Chemical Implants<BR>"
 		var/turf/Tr = null
-		for(var/obj/item/implant/chem/C in item_list)
+		for(var/obj/item/implant/chem/C in GLOB.item_list)
 			Tr = get_turf(C)
 			if((Tr) && (Tr.z != src.z))	continue//Out of range
 			if(!C.implanted) continue
@@ -43,25 +43,24 @@
 			dat += "<A href='?src=\ref[src];inject10=\ref[C]'>(<font color=red>(10)</font>)</A><BR>"
 			dat += "********************************<BR>"
 		dat += "<HR>Tracking Implants<BR>"
-		for(var/obj/item/implant/tracking/T in item_list)
+		for(var/obj/item/implant/tracking/T in GLOB.item_list)
 			Tr = get_turf(T)
 			if((Tr) && (Tr.z != src.z))	continue//Out of range
 			if(!T.implanted) continue
 			var/loc_display = "Unknown"
 			var/mob/living/carbon/M = T.imp_in
-			if(M.z == 1 && !istype(M.loc, /turf/open/space))
+			if(is_ground_level(M.z) && !isspaceturf(M.loc))
 				var/turf/mob_loc = get_turf(M)
 				loc_display = mob_loc.loc
-			if(T.malfunction)
-				loc_display = pick(teleportlocs)
 			dat += "ID: [T.id]|Location: [loc_display]<BR>"
 			dat += "<A href='?src=\ref[src];warn=\ref[T]'>(<font color=red><i>Message Holder</i></font>)</A> |<BR>"
 			dat += "********************************<BR>"
 		dat += "<HR><A href='?src=\ref[src];lock=1'>Lock Console</A>"
 
-	user << browse(dat, "window=computer;size=400x500")
+	var/datum/browser/popup = new(user, "computer", "<div align='center'>Prisoner Implant Manager System</div>", 400, 500)
+	popup.set_content(dat)
+	popup.open(FALSE)
 	onclose(user, "computer")
-	return
 
 
 /obj/machinery/computer/prisoner/process()
@@ -73,7 +72,7 @@
 /obj/machinery/computer/prisoner/Topic(href, href_list)
 	if(..())
 		return
-	if((usr.contents.Find(src) || (in_range(src, usr) && istype(src.loc, /turf))) || (istype(usr, /mob/living/silicon)))
+	if((usr.contents.Find(src) || (in_range(src, usr) && istype(src.loc, /turf))) || (issilicon(usr)))
 		usr.set_interaction(src)
 
 		if(href_list["inject1"])

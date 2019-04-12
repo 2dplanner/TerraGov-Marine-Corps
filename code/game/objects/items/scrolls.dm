@@ -24,10 +24,10 @@
 
 /obj/item/teleportation_scroll/Topic(href, href_list)
 	..()
-	if (usr.stat || usr.is_mob_restrained() || src.loc != usr)
+	if (usr.stat || usr.restrained() || src.loc != usr)
 		return
 	var/mob/living/carbon/human/H = usr
-	if (!( istype(H, /mob/living/carbon/human)))
+	if (!ishuman(H))
 		return 1
 	if ((usr == src.loc || (in_range(src, usr) && istype(src.loc, /turf))))
 		usr.set_interaction(src)
@@ -39,12 +39,11 @@
 
 /obj/item/teleportation_scroll/proc/teleportscroll(var/mob/user)
 
-	var/A
+	var/area/thearea = input(user, "Area to jump to", "BOOYEA") as null|anything in return_sorted_areas()
+	if(!thearea)
+		return
 
-	A = input(user, "Area to jump to", "BOOYEA", A) in teleportlocs
-	var/area/thearea = teleportlocs[A]
-
-	if (user.stat || user.is_mob_restrained())
+	if (user.stat || user.restrained())
 		return
 	if(!((user == loc || (in_range(src, user) && istype(src.loc, /turf)))))
 		return

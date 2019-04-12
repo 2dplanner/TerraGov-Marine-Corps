@@ -21,7 +21,7 @@
 
 
 	check_eye(mob/user)
-		if (user.is_mob_incapacitated() || ((get_dist(user, src) > 1 || !( user.canmove ) || is_blind(user)) && !istype(user, /mob/living/silicon))) //user can't see - not sure why canmove is here.
+		if (user.incapacitated() || ((get_dist(user, src) > 1 || !( user.canmove ) || is_blind(user)) && !issilicon(user))) //user can't see - not sure why canmove is here.
 			user.unset_interaction()
 			return
 		else if ( !current || !current.can_use() ) //camera doesn't work
@@ -44,7 +44,7 @@
 		if (src.z > 6)
 			to_chat(user, "<span class='danger'>Unable to establish a connection: You're too far away from the station!</span>")
 			return
-		if(stat & (NOPOWER|BROKEN))	return
+		if(machine_stat & (NOPOWER|BROKEN))	return
 
 		if(!isAI(user))
 			user.set_interaction(src)
@@ -92,7 +92,7 @@
 			A.client.eye = A.eyeobj
 			return 1
 
-		if (!C.can_use() || user.is_mob_incapacitated() || (get_dist(user, src) > 1 || user.interactee != src || is_blind(user) || !( user.canmove ) && !istype(user, /mob/living/silicon)))
+		if (!C.can_use() || user.incapacitated() || (get_dist(user, src) > 1 || user.interactee != src || is_blind(user) || !( user.canmove ) && !issilicon(user)))
 			return 0
 		src.current = C
 		use_power(50)
@@ -109,7 +109,7 @@
 		else if(ismob(A))
 			if(ishuman(A))
 				jump_to = locate() in A:head
-			else if(isrobot(A))
+			else if(iscyborg(A))
 				jump_to = A:camera
 		else if(isobj(A))
 			jump_to = locate() in A
@@ -129,14 +129,6 @@
 		if(can_access_camera(jump_to))
 			switch_to_camera(user,jump_to)
 
-//Camera control: mouse.
-/obj/machinery/computer/security/clicked(var/mob/user, var/list/mods)
-	if (mods["ctrl"] && mods["middle"])
-		if (src == user.interactee)
-			jump_on_click(user, src)
-		return 1
-
-	..()
 
 /obj/machinery/computer/security/telescreen
 	name = "Telescreen"
@@ -149,7 +141,7 @@
 
 /obj/machinery/computer/security/telescreen/update_icon()
 	icon_state = initial(icon_state)
-	if(stat & BROKEN)
+	if(machine_stat & BROKEN)
 		icon_state += "b"
 	return
 
@@ -205,8 +197,7 @@
 	icon = 'icons/Marine/shuttle-parts.dmi'
 	icon_state = "consoleleft"
 	circuit = null
-	unacidable = TRUE
-	exproof = TRUE
+	resistance_flags = UNACIDABLE|INDESTRUCTIBLE
 
 
 /obj/machinery/computer/security/dropship/one

@@ -6,7 +6,7 @@
 	density = 1
 	layer = TABLE_LAYER
 	anchored = 1
-	unacidable = 1
+	resistance_flags = UNACIDABLE
 	use_power = 1
 	idle_power_usage = 1
 	active_power_usage = 5
@@ -112,7 +112,7 @@
 	H.internal = anes_tank
 	H.visible_message("<span class='notice'>[user] fits the mask over [H]'s face and turns on the anesthetic.</span>'")
 	to_chat(H, "<span class='information'>You begin to feel sleepy.</span>")
-	H.dir = SOUTH
+	H.setDir(SOUTH)
 	..()
 
 /obj/machinery/optable/unbuckle(mob/living/user)
@@ -185,7 +185,7 @@
 	set category = "Object"
 	set src in oview(1)
 
-	if(usr.stat || !ishuman(usr) || usr.is_mob_restrained() || !check_table(usr))
+	if(usr.stat || !ishuman(usr) || usr.restrained() || !check_table(usr))
 		return
 
 	take_victim(usr,usr)

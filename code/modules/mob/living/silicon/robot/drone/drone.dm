@@ -24,12 +24,15 @@
 	var/obj/item/stack/sheet/wood/cyborg/stack_wood = null
 	var/obj/item/stack/sheet/glass/cyborg/stack_glass = null
 	var/obj/item/stack/sheet/mineral/plastic/cyborg/stack_plastic = null
-	var/obj/item/device/matter_decompiler/decompiler = null
+	var/obj/item/matter_decompiler/decompiler = null
 
 	//Used for self-mailing.
 	var/mail_destination = ""
 
 	holder_type = /obj/item/holder/drone
+
+/mob/living/silicon/robot/drone/get_death_threshold()
+	return CONFIG_GET(number/maintdrone_health_threshold_dead)
 
 /mob/living/silicon/robot/drone/Initialize()
 
@@ -72,7 +75,7 @@
 	stack_plastic = locate(/obj/item/stack/sheet/mineral/plastic/cyborg) in src.module
 
 	//Grab decompiler.
-	decompiler = locate(/obj/item/device/matter_decompiler) in src.module
+	decompiler = locate(/obj/item/matter_decompiler) in src.module
 
 	//Some tidying-up.
 	flavor_text = "This is an XP-45 Engineering Drone, one of the many fancy things that come out of the Nanotrasen Research Department. It's designed to assist both ship repairs as well as ground missions. Shiny!"
@@ -82,7 +85,7 @@
 	laws = new /datum/ai_laws/drone()
 	connected_ai = null
 
-	aiCamera = new/obj/item/device/camera/siliconcam/drone_camera(src)
+	aiCamera = new/obj/item/camera/siliconcam/drone_camera(src)
 	playsound(src.loc, 'sound/machines/twobeep.ogg', 25, 0)
 
 //Redefining some robot procs...
@@ -111,7 +114,7 @@
 		to_chat(user, "<span class='warning'>The maintenance drone chassis not compatible with \the [W].</span>")
 		return
 
-	else if (istype(W, /obj/item/tool/crowbar))
+	else if(iscrowbar(W))
 		to_chat(user, "The machine is hermetically sealed. You can't open the case.")
 		return
 
@@ -160,14 +163,8 @@
 
 //Reboot procs.
 
-/mob/living/silicon/robot/drone/proc/request_player()
-	for(var/mob/dead/observer/O in player_list)
-		if(jobban_isbanned(O, "Cyborg"))
-			continue
-
 /mob/living/silicon/robot/drone/proc/question(var/client/C)
 	spawn(0)
-		if(!C || jobban_isbanned(C,"Cyborg"))	return
 		var/response = alert(C, "Someone is attempting to reboot a maintenance drone. Would you like to play as one?", "Maintenance drone reboot", "Yes", "No", "Never for this round.")
 		if(!C || ckey)
 			return
@@ -238,7 +235,7 @@
 		if(custom_name)
 			return 0
 
-		for (var/mob/living/silicon/robot/drone/A in mob_list)
+		for (var/mob/living/silicon/robot/drone/A in GLOB.silicon_mobs)
 			if(newname == A.nicknumber)
 				to_chat(src, "<span class='warning'>That identifier is taken, pick again.</span>")
 				return 0

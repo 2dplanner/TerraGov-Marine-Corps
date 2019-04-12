@@ -1,7 +1,7 @@
 //
 //Robotic Component Analyser, basically a health analyser for robots
 //
-/obj/item/device/robotanalyzer
+/obj/item/robotanalyzer
 	name = "cyborg analyzer"
 	icon_state = "robotanalyzer"
 	item_state = "analyzer"
@@ -16,7 +16,7 @@
 	origin_tech = "magnets=1;biotech=1"
 	var/mode = 1;
 
-/obj/item/device/robotanalyzer/attack(mob/living/M as mob, mob/living/user as mob)
+/obj/item/robotanalyzer/attack(mob/living/M as mob, mob/living/user as mob)
 	if(( (CLUMSY in user.mutations) || user.getBrainLoss() >= 60) && prob(50))
 		to_chat(user, text("<span class='warning'> You try to analyze the floor's vitals!</span>"))
 		for(var/mob/O in viewers(M, null))
@@ -26,10 +26,7 @@
 		user.show_message("<span class='notice'> Key: Suffocation/Toxin/Burns/Brute</span>", 1)
 		user.show_message("<span class='notice'> Body Temperature: ???</span>", 1)
 		return
-	if(!(istype(user, /mob/living/carbon/human) || ticker) && ticker.mode.name != "monkey")
-		to_chat(user, "<span class='warning'>You don't have the dexterity to do this!</span>")
-		return
-	if(!istype(M, /mob/living/silicon/robot) && !(ishuman(M) && (M:species.flags & IS_SYNTHETIC)))
+	if(!iscyborg(M) && !(ishuman(M) && (M:species.species_flags & IS_SYNTHETIC)))
 		to_chat(user, "<span class='warning'>You can't analyze non-robotic things!</span>")
 		return
 
@@ -42,7 +39,7 @@
 	if(M.tod && M.stat == DEAD)
 		user.show_message("<span class='notice'> Time of Disable: [M.tod]</span>")
 
-	if (istype(M, /mob/living/silicon/robot))
+	if (iscyborg(M))
 		var/mob/living/silicon/robot/H = M
 		var/list/damaged = H.get_damaged_components(1,1,1)
 		user.show_message("<span class='notice'> Localized Damage:</span>",1)
@@ -60,7 +57,7 @@
 		if(H.emagged && prob(5))
 			user.show_message("<span class='warning'> \t ERROR: INTERNAL SYSTEMS COMPROMISED</span>",1)
 
-	if (ishuman(M) && (M:species.flags & IS_SYNTHETIC))
+	if (ishuman(M) && (M:species.species_flags & IS_SYNTHETIC))
 		var/mob/living/carbon/human/H = M
 		var/list/damaged = H.get_damaged_limbs(1,1)
 		user.show_message("<span class='notice'> Localized Damage, Brute/Electronics:</span>",1)

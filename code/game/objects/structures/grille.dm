@@ -7,12 +7,15 @@
 	anchored = TRUE
 	flags_atom = CONDUCT
 	layer = OBJ_LAYER
-	explosion_resistance = 5
-	var/health = 10
+	armor = list("melee" = 50, "bullet" = 70, "laser" = 70, "energy" = 100, "bomb" = 10, "bio" = 100, "rad" = 100, "fire" = 0, "acid" = 0)
+	health = 10
 	var/destroyed = FALSE
 
+/obj/structure/grille/broken
+	icon_state = "brokengrille"
+	density = FALSE
 
-/obj/structure/grille/fence/
+/obj/structure/grille/fence
 	var/width = 3
 	health = 50
 
@@ -146,7 +149,7 @@
 			playsound(loc, 'sound/items/Wirecutter.ogg', 25, 1)
 			new /obj/item/stack/rods(loc, 2)
 			qdel(src)
-	else if(isscrewdriver(W) && istype(loc, /turf/open))
+	else if(isscrewdriver(W) && isopenturf(loc))
 		if(!shock(user, 90))
 			playsound(loc, 'sound/items/Screwdriver.ogg', 25, 1)
 			anchored = !anchored
@@ -265,10 +268,10 @@
 		/obj/machinery/door/airlock,
 		/obj/structure/grille/almayer)
 
-/obj/structure/grille/almayer/New()
-	spawn(0)
-		relativewall()
-		relativewall_neighbours()
+/obj/structure/grille/almayer/Initialize()
+	. = ..()
+	relativewall()
+	relativewall_neighbours()
 
 /obj/structure/grille/almayer/update_icon()
 	relativewall()

@@ -3,11 +3,10 @@
 	anchored = 1
 	density = 1
 	layer = OBJ_LAYER
-	unacidable = 0
 	var/state = 0
 	var/dismantlectr = 0
 	var/buildctr = 0
-	var/health = 125
+	health = 125
 	var/repair_state = 0
 	// To store what type of wall it used to be
 	var/original
@@ -31,7 +30,7 @@
 	return 1
 
 /obj/structure/girder/attack_alien(mob/living/carbon/Xenomorph/M)
-	if(M.mob_size != MOB_SIZE_BIG || unacidable)
+	if(M.mob_size != MOB_SIZE_BIG || CHECK_BITFIELD(resistance_flags, UNACIDABLE|INDESTRUCTIBLE))
 		to_chat(M, "<span class='warning'>Your claws aren't sharp enough to damage \the [src].</span>")
 		return FALSE
 	else
@@ -55,7 +54,7 @@
 	if(user.action_busy)
 		return TRUE //no afterattack
 	if(health > 0)
-		if(istype(W, /obj/item/tool/wrench))
+		if(iswrench(W))
 			if(!anchored)
 				if(istype(get_area(src.loc),/area/shuttle || istype(get_area(src.loc),/area/sulaco/hangar)))
 					to_chat(user, "<span class='warning'>No. This area is needed for the dropships and personnel.</span>")
@@ -90,7 +89,7 @@
 			to_chat(user, "<span class='notice'>You drill through the girder!</span>")
 			dismantle()
 
-		else if(istype(W, /obj/item/tool/screwdriver) && state == 2 && istype(src,/obj/structure/girder/reinforced))
+		else if(isscrewdriver(W) && state == 2 && istype(src,/obj/structure/girder/reinforced))
 			playsound(src.loc, 'sound/items/Screwdriver.ogg', 25, 1)
 			to_chat(user, "<span class='notice'>Now unsecuring support struts</span>")
 			if(do_after(user,40, TRUE, 5, BUSY_ICON_BUILD))
@@ -98,7 +97,7 @@
 				to_chat(user, "<span class='notice'>You unsecured the support struts!</span>")
 				state = 1
 
-		else if(istype(W, /obj/item/tool/wirecutters) && istype(src,/obj/structure/girder/reinforced) && state == 1)
+		else if(iswirecutter(W) && istype(src,/obj/structure/girder/reinforced) && state == 1)
 			playsound(src.loc, 'sound/items/Wirecutter.ogg', 25, 1)
 			to_chat(user, "<span class='notice'>Now removing support struts</span>")
 			if(do_after(user,40, TRUE, 5, BUSY_ICON_BUILD))
@@ -107,7 +106,7 @@
 				new/obj/structure/girder( src.loc )
 				qdel(src)
 
-		else if(istype(W, /obj/item/tool/crowbar) && state == 0 && anchored )
+		else if(iscrowbar(W) && state == 0 && anchored)
 			playsound(src.loc, 'sound/items/Crowbar.ogg', 25, 1)
 			to_chat(user, "<span class='notice'>Now dislodging the girder...</span>")
 			if(do_after(user, 40, TRUE, 5, BUSY_ICON_BUILD))
@@ -158,7 +157,7 @@
 
 			add_hiddenprint(usr)
 
-		else if(istype(W, /obj/item/tool/weldingtool) && buildctr %2 != 0)
+		else if(iswelder(W) && buildctr %2 != 0)
 			var/obj/item/tool/weldingtool/WT = W
 			if (WT.remove_fuel(0,user))
 				playsound(src.loc, 'sound/items/Welder2.ogg', 25, 1)
@@ -170,7 +169,7 @@
 					buildctr++
 					to_chat(user, "<span class='notice'>You weld the metal to the girder!</span>")
 			return
-		else if(istype(W, /obj/item/tool/wirecutters) && dismantlectr %2 != 0)
+		else if(iswirecutter(W) && dismantlectr %2 != 0)
 			if(do_after(user,15, TRUE, 5, BUSY_ICON_BUILD))
 				if (dismantlectr >= 5)
 					dismantle()
@@ -203,7 +202,7 @@
 					repair_state = 1
 				return
 		if (repair_state == 1)
-			if(istype(W, /obj/item/tool/weldingtool))
+			if(iswelder(W))
 				if(do_after(user,30, TRUE, 5, BUSY_ICON_BUILD))
 					if(gc_destroyed || repair_state != 1) return
 					to_chat(user, "<span class='notice'>You weld the girder together!</span>")
@@ -261,13 +260,13 @@
 /obj/structure/girder/proc/update_state()
 	if (health <= 0)
 		icon_state = "[icon_state]_damaged"
-		unacidable = 1
+		ENABLE_BITFIELD(resistance_flags, UNACIDABLE)
 		density = 0
 	else
 		var/underscore_position =  findtext(icon_state,"_")
 		var/new_state = copytext(icon_state, 1, underscore_position)
 		icon_state = new_state
-		unacidable = 0
+		DISABLE_BITFIELD(resistance_flags, UNACIDABLE)
 		density = 1
 	buildctr = 0
 	repair_state = 0
