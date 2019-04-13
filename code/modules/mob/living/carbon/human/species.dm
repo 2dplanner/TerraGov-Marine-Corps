@@ -428,6 +428,44 @@
 	H.remove_overlay(MOTH_WINGS_LAYER)
 	H.remove_underlay(MOTH_WINGS_BEHIND_LAYER)
 
+/datum/species/felinid
+	name = "Felinid"
+	name_plural = "Felinids"
+	show_paygrade = TRUE
+	count_human = TRUE
+	species_flags = HAS_SKIN_TONE|HAS_LIPS|HAS_UNDERWEAR
+	preferences = list("mutant_ears" = "Ears","mutant_tail" = "Tail")
+	screams = list("male" = "male_scream", "female" = "female_scream")
+	paincries = list("male" = "male_pain", "female" = "female_pain")
+
+/datum/species/felinid/proc/update_felinid_ears(mob/living/carbon/human/H)
+	H.remove_overlay(FELINID_EARS_LAYER)
+	H.remove_underlay(FELINID_EARS_BEHIND_LAYER)
+
+	var/datum/sprite_accessory/felinid_ears/ears = GLOB.felinid_ears_list[H.felinid_ears]
+
+	if(EARS)
+		H.overlays_standing[FELINID_EARS_LAYER] = image(ears.icon, icon_state = "m_ears_cat_[ears.icon_state]_FRONT")
+		H.underlays_standing[FELINID_EARS_BEHIND_LAYER] = image(ears.icon, icon_state = "m_ears_cat_[ears.icon_state]_BEHIND")
+		H.apply_overlay(FELINID_EARS_LAYER)
+		H.apply_underlay(FELINID_EARS_BEHIND_LAYER)
+
+/datum/species/felinid/update_body(mob/living/carbon/human/H)
+	update_felinid_ears(H)
+
+/datum/species/felinid/update_inv_head(mob/living/carbon/human/H)
+	update_felinid_ears(H)
+
+/datum/species/felinid/update_inv_w_uniform(mob/living/carbon/human/H)
+	update_felinid_ears(H)
+
+/datum/species/felinid/update_inv_wear_suit(mob/living/carbon/human/H)
+	update_felinid_ears(H)
+
+/datum/species/felinid/post_species_loss(mob/living/carbon/human/H)
+	H.remove_overlay(FELINID_EARS_LAYER)
+	H.remove_underlay(FELINID_EARS_BEHIND_LAYER)
+
 /datum/species/vox
 	name = "Vox"
 	name_plural = "Vox"

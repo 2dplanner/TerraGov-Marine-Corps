@@ -432,7 +432,9 @@ GLOBAL_LIST_INIT(xenoupgradetiers, list(XENO_UPGRADE_BASETYPE, XENO_UPGRADE_INVA
 #define REST_HALLOSS_RECOVERY_RATE -32
 
 // Human Overlay Indexes
-#define LASER_LAYER				27		//For sniper targeting laser
+#define LASER_LAYER				29		//For sniper targeting laser
+#define FELINID_EARS_LAYER		28
+#define FELINID_TAIL_LAYER		27
 #define MOTH_WINGS_LAYER		26
 #define MUTANTRACE_LAYER		25
 #define MUTATIONS_LAYER			24
@@ -463,6 +465,8 @@ GLOBAL_LIST_INIT(xenoupgradetiers, list(XENO_UPGRADE_BASETYPE, XENO_UPGRADE_INVA
 #define TOTAL_LAYERS			27
 
 #define MOTH_WINGS_BEHIND_LAYER	1
+#define FELINID_EARS_BEHIND_LAYER 1
+#define FELINID_TAIL_BEHIND_LAYER 1
 
 #define TOTAL_UNDERLAYS			1
 

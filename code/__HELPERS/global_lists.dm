@@ -22,7 +22,7 @@ GLOBAL_LIST_EMPTY(joketips)
 var/global/list/active_laser_targets = list()
 
 //used by the main overwatch console
-var/global/list/active_orbital_beacons = list()		
+var/global/list/active_orbital_beacons = list()
 
 #define SYNTH_TYPES list("Synthetic","Early Synthetic")
 
@@ -47,6 +47,10 @@ var/global/list/datum/poster/poster_designs = subtypesof(/datum/poster)
 	for(var/path in subtypesof(/datum/sprite_accessory/moth_wings))
 		var/datum/sprite_accessory/moth_wings/wings = new path()
 		GLOB.moth_wings_list[wings.name] = wings
+
+	for(var/path in subtypesof(/datum/sprite_accessory/felinid_ears))
+		var/datum/sprite_accessory/felinid_ears/ears = new path()
+		GLOB.felinid_ears_list[ears.name] = ears
 
 	// Ethnicity - Initialise all /datum/ethnicity into a list indexed by ethnicity name
 	for(var/path in subtypesof(/datum/ethnicity))

@@ -71,7 +71,7 @@
 */
 
 /datum/sprite_accessory/hair
-	species_allowed = list("Human","Unathi","Tajara","Skrell","Vox","Machine","Synthetic","Early Synthetic")
+	species_allowed = list("Human","Unathi","Tajara","Skrell","Vox","Machine","Synthetic","Early Synthetic","Felinid")
 	icon = 'icons/mob/Human_face.dmi'
 
 /datum/sprite_accessory/hair/bald
@@ -1155,3 +1155,21 @@
 /datum/sprite_accessory/moth_wings/snow
 	name = "Snow"
 	icon_state = "snow"
+
+/datum/sprite_accessory/felinid_tail
+	species_allowed = list("Felinid")
+	do_colouration = TRUE
+	icon = 'icons/mob/species/felinid/mutant_parts.dmi'
+
+/datum/sprite_accessory/felinid_tail/cat
+	name = "Cat"
+	icon_state = "tail_cat"
+
+/datum/sprite_accessory/felinid_ears
+	species_allowed = list("Felinid")
+	do_colouration = TRUE
+	icon = 'icons/mob/species/felinid/mutant_parts.dmi'
+
+/datum/sprite_accessory/felinid_ears/cat
+	name = "Cat"
+	icon_state = "ears_cat"
